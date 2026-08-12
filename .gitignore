@@ -1,0 +1,63 @@
+# ---------------------------------------------------------------
+# Unreal Engine 5 — generated folders
+# ---------------------------------------------------------------
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+Platforms/*/Binaries/
+Platforms/*/Build/
+Platforms/*/Intermediate/
+
+# ---------------------------------------------------------------
+# Generated IDE / toolchain files
+# ---------------------------------------------------------------
+*.sln
+*.suo
+*.sdf
+*.opensdf
+*.opendb
+*.VC.db
+*.VC.opendb
+.vs/
+.vscode/
+.idea/
+*.xcodeproj
+*.xcworkspace
+Makefile
+CMakeLists.txt
+compile_commands.json
+
+# ---------------------------------------------------------------
+# Asset workspace leftovers
+# ---------------------------------------------------------------
+*.pdb
+*.dll
+*.exe
+*.so
+*.dylib
+*.stackdump
+*.tmp
+*.log
+
+# ---------------------------------------------------------------
+# Packaged builds and archives
+# ---------------------------------------------------------------
+Builds/
+Packaged/
+*.zip
+!resources/*.zip
+
+# ---------------------------------------------------------------
+# OS noise
+# ---------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# ---------------------------------------------------------------
+# Personal study notes — not part of the deliverable
+# ---------------------------------------------------------------
+learn/
