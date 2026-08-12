@@ -1,0 +1,34 @@
+# ---------------------------------------------------------------
+# Line endings are normalised to LF inside the repository so the
+# project compiles the same way on Windows, Linux and macOS.
+# ---------------------------------------------------------------
+* text=auto eol=lf
+
+# Source and configuration
+*.cpp    text eol=lf
+*.h      text eol=lf
+*.cs     text eol=lf
+*.py     text eol=lf
+*.ini    text eol=lf
+*.md     text eol=lf
+*.json   text eol=lf
+*.uproject text eol=lf
+
+# Shell helpers must keep LF or they will not run on Unix hosts
+*.sh     text eol=lf
+
+# Windows-only helpers keep CRLF
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+
+# ---------------------------------------------------------------
+# Binary assets — never diffed, never converted
+# ---------------------------------------------------------------
+*.uasset binary
+*.umap   binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.wav    binary
+*.fbx    binary
+*.zip    binary
