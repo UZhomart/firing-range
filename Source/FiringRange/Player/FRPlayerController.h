@@ -52,6 +52,12 @@ public:
 
 	bool IsPauseMenuOpen() const { return bPauseMenuOpen; }
 
+	/** Priority of the controller context. Higher than the pawn context so pause always wins. */
+	static constexpr int32 ControllerContextPriority = 10;
+
+	/** Priority used by the pawn for its movement and weapon bindings. */
+	static constexpr int32 PawnContextPriority = 0;
+
 protected:
 	/**
 	 * Called right after the world has been paused.
@@ -70,12 +76,6 @@ protected:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> ActionPause;
-
-	/** Priority of the controller context. Higher than the pawn context so pause always wins. */
-	static constexpr int32 ControllerContextPriority = 10;
-
-	/** Priority used by the pawn for its movement and weapon bindings. */
-	static constexpr int32 PawnContextPriority = 0;
 
 	/** Lowest pitch the camera may reach, in degrees. */
 	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Camera")

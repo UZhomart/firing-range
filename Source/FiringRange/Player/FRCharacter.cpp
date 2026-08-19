@@ -14,6 +14,7 @@
 
 #include "Core/FRGameInstance.h"
 #include "FiringRange.h"
+#include "Player/FRPlayerController.h"
 
 AFRCharacter::AFRCharacter()
 {
@@ -183,10 +184,12 @@ void AFRCharacter::PawnClientRestart()
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem =
 			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
-			// Clearing first makes respawning idempotent: without it the context
-			// would be stacked again on every restart.
-			Subsystem->ClearAllMappings();
-			Subsystem->AddMappingContext(InputContext, 0);
+			// Only this context is removed, never every mapping: the controller
+			// registers its own pause context before the pawn is possessed, and
+			// ClearAllMappings here would silently destroy it. Removing before
+			// adding still keeps respawning idempotent.
+			Subsystem->RemoveMappingContext(InputContext);
+			Subsystem->AddMappingContext(InputContext, AFRPlayerController::PawnContextPriority);
 		}
 	}
 }
