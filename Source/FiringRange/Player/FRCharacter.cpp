@@ -51,12 +51,80 @@ AFRCharacter::AFRCharacter()
 	Movement->AirControl = 0.35f;
 	Movement->BrakingDecelerationWalking = 2048.0f;
 	Movement->GetNavAgentPropertiesRef().bCanCrouch = true;
+
+	// One entry per EFRAmmoType, in declaration order: 9 mm, 12 Gauge, 7.62 mm.
+	const int32 AmmoTypes = FRTypes::AmmoTypeCount();
+	StartingReserveAmmo.Init(0, AmmoTypes);
+	MaxReserveAmmoPerType.Init(0, AmmoTypes);
+
+	StartingReserveAmmo[static_cast<int32>(EFRAmmoType::Pistol)] = 72;
+	StartingReserveAmmo[static_cast<int32>(EFRAmmoType::Shell)] = 32;
+	StartingReserveAmmo[static_cast<int32>(EFRAmmoType::Rifle)] = 25;
+
+	MaxReserveAmmoPerType[static_cast<int32>(EFRAmmoType::Pistol)] = 180;
+	MaxReserveAmmoPerType[static_cast<int32>(EFRAmmoType::Shell)] = 80;
+	MaxReserveAmmoPerType[static_cast<int32>(EFRAmmoType::Rifle)] = 60;
+}
+
+int32 AFRCharacter::GetAmmoIndex(EFRAmmoType AmmoType) const
+{
+	const int32 Index = static_cast<int32>(AmmoType);
+	return ReserveAmmo.IsValidIndex(Index) ? Index : INDEX_NONE;
+}
+
+int32 AFRCharacter::GetReserveAmmo(EFRAmmoType AmmoType) const
+{
+	const int32 Index = GetAmmoIndex(AmmoType);
+	return Index != INDEX_NONE ? ReserveAmmo[Index] : 0;
+}
+
+int32 AFRCharacter::GetMaxReserveAmmo(EFRAmmoType AmmoType) const
+{
+	const int32 Index = static_cast<int32>(AmmoType);
+	return MaxReserveAmmoPerType.IsValidIndex(Index) ? MaxReserveAmmoPerType[Index] : 0;
+}
+
+int32 AFRCharacter::AddReserveAmmo(EFRAmmoType AmmoType, int32 Amount)
+{
+	const int32 Index = GetAmmoIndex(AmmoType);
+	if (Index == INDEX_NONE || Amount <= 0)
+	{
+		return 0;
+	}
+
+	const int32 Limit = GetMaxReserveAmmo(AmmoType);
+	const int32 Before = ReserveAmmo[Index];
+	ReserveAmmo[Index] = FMath::Min(Before + Amount, Limit);
+
+	// The caller uses the return value to decide whether a pickup was consumed:
+	// walking over a box while already full must leave the box in the world.
+	return ReserveAmmo[Index] - Before;
+}
+
+int32 AFRCharacter::ConsumeReserveAmmo(EFRAmmoType AmmoType, int32 Amount)
+{
+	const int32 Index = GetAmmoIndex(AmmoType);
+	if (Index == INDEX_NONE || Amount <= 0)
+	{
+		return 0;
+	}
+
+	const int32 Taken = FMath::Min(Amount, ReserveAmmo[Index]);
+	ReserveAmmo[Index] -= Taken;
+	return Taken;
+}
+
+void AFRCharacter::ResetReserveAmmo()
+{
+	ReserveAmmo = StartingReserveAmmo;
+	ReserveAmmo.SetNum(FRTypes::AmmoTypeCount());
 }
 
 void AFRCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	ResetReserveAmmo();
 	RefreshLookSettings();
 
 	// Settings can change while the range level is running, because the pause

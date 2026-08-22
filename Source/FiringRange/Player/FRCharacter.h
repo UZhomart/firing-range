@@ -45,6 +45,30 @@ public:
 	/** Scene component the weapon actor is attached to, parented to the camera. */
 	USceneComponent* GetWeaponHolder() const { return WeaponHolder; }
 
+	// -- Ammunition reserve ---------------------------------------------------
+	//
+	// The reserve is stored per ammunition family rather than per weapon, so a
+	// box of 9 mm refills every weapon that feeds from 9 mm. The arrays are
+	// indexed by EFRAmmoType.
+
+	/** Rounds currently carried for an ammunition family. */
+	int32 GetReserveAmmo(EFRAmmoType AmmoType) const;
+
+	/** Upper limit the player may carry for an ammunition family. */
+	int32 GetMaxReserveAmmo(EFRAmmoType AmmoType) const;
+
+	/** Adds rounds up to the carry limit and returns how many were actually taken. */
+	int32 AddReserveAmmo(EFRAmmoType AmmoType, int32 Amount);
+
+	/** Removes rounds for a reload and returns how many were actually available. */
+	int32 ConsumeReserveAmmo(EFRAmmoType AmmoType, int32 Amount);
+
+	/** Restores the reserve to its starting values. Used by the pause menu restart. */
+	void ResetReserveAmmo();
+
+	/** True while the player holds the aim key. Read by the weapon and by the HUD. */
+	bool IsAiming() const { return bIsAiming; }
+
 protected:
 	// -- Components -----------------------------------------------------------
 
@@ -120,6 +144,26 @@ protected:
 
 	/** True while the sprint key is held and the character may actually sprint. */
 	bool bWantsToSprint = false;
+
+	/** True while the aim key is held. */
+	bool bIsAiming = false;
+
+	// -- Ammunition configuration ---------------------------------------------
+
+	/** Rounds carried at the start of a session, one entry per EFRAmmoType. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Ammunition")
+	TArray<int32> StartingReserveAmmo;
+
+	/** Carry limit, one entry per EFRAmmoType. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Ammunition")
+	TArray<int32> MaxReserveAmmoPerType;
+
+	/** Live reserve, one entry per EFRAmmoType. */
+	UPROPERTY(Transient, VisibleInstanceOnly, Category = "Firing Range|Ammunition")
+	TArray<int32> ReserveAmmo;
+
+	/** Returns a valid array index for an ammunition family, or INDEX_NONE. */
+	int32 GetAmmoIndex(EFRAmmoType AmmoType) const;
 
 private:
 	/** Cached copy of the mouse sensitivity setting, refreshed when settings change. */
