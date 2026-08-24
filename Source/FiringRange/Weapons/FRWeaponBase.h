@@ -205,6 +205,91 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Optics", meta = (ClampMin = "10.0", ClampMax = "120.0"))
 	float AimFieldOfView = 62.0f;
 
+	// -- Recoil ---------------------------------------------------------------
+	//
+	// Recoil is written straight into the control rotation in degrees instead of
+	// being pushed through AddControllerPitchInput. Input goes through the mouse
+	// sensitivity setting, so a player on a high sensitivity would otherwise get
+	// a completely different weapon.
+
+	/** Smallest upward kick of a single shot, in degrees. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Recoil", meta = (ClampMin = "0.0"))
+	float RecoilPitchMin = 0.7f;
+
+	/** Largest upward kick of a single shot, in degrees. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Recoil", meta = (ClampMin = "0.0"))
+	float RecoilPitchMax = 1.3f;
+
+	/** Sideways kick of a single shot, in degrees. Applied with a random sign. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Recoil", meta = (ClampMin = "0.0"))
+	float RecoilYawMax = 0.35f;
+
+	/** How fast the pending kick is fed into the view, in degrees per second. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Recoil", meta = (ClampMin = "1.0"))
+	float RecoilRiseSpeed = 34.0f;
+
+	/** Seconds of silence after the last shot before the view settles back down. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Recoil", meta = (ClampMin = "0.0"))
+	float RecoilRecoveryDelay = 0.22f;
+
+	/** How fast the view settles back down, in degrees per second. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Recoil", meta = (ClampMin = "0.0"))
+	float RecoilRecoverySpeed = 16.0f;
+
+	/** Fraction of the kick that is given back. 1 returns the aim exactly where it was. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Recoil", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+	float RecoilRecoveryRatio = 0.75f;
+
+	// -- View model -----------------------------------------------------------
+	//
+	// No skeletal mesh and no animation asset is committed with the project, so
+	// the weapon is animated procedurally: the whole actor is moved and rotated
+	// relative to the holder that sits under the camera.
+
+	/** Weapon position relative to the holder while firing from the hip. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|View Model")
+	FVector HipLocation = FVector(22.0f, 11.0f, -10.0f);
+
+	/** Weapon rotation relative to the holder while firing from the hip. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|View Model")
+	FRotator HipRotation = FRotator(-2.0f, -3.0f, 0.0f);
+
+	/** Weapon position while aiming. Lines the barrel up with the crosshair. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|View Model")
+	FVector AimLocation = FVector(26.0f, 0.0f, -4.6f);
+
+	/** Weapon rotation while aiming. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|View Model")
+	FRotator AimRotation = FRotator::ZeroRotator;
+
+	/** How fast the weapon slides between the hip and the aim pose. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|View Model", meta = (ClampMin = "1.0"))
+	float AimInterpSpeed = 13.0f;
+
+	/** How far the view model is pushed back by one shot, in centimetres. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|View Model", meta = (ClampMin = "0.0"))
+	float ViewKickBack = 3.2f;
+
+	/** How far the muzzle of the view model rises on one shot, in degrees. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|View Model", meta = (ClampMin = "0.0"))
+	float ViewKickPitch = 6.0f;
+
+	/** How fast the view model returns to its rest pose after a shot. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|View Model", meta = (ClampMin = "1.0"))
+	float ViewKickRecoverySpeed = 9.0f;
+
+	/** How far the weapon drops out of view during a reload, in centimetres. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|View Model")
+	float ReloadDipDistance = 9.0f;
+
+	/** How far the weapon is rolled during a reload, in degrees. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|View Model")
+	float ReloadRollAngle = 26.0f;
+
+	/** Amplitude of the idle walking bob, in centimetres. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|View Model")
+	float WalkBobAmount = 0.9f;
+
 	// -- Audio ----------------------------------------------------------------
 	// Every slot is optional. The project ships without audio assets, so a build
 	// that has none is silent rather than broken.
@@ -255,6 +340,38 @@ protected:
 
 	/** Plays a sound at the weapon, ignoring null slots. */
 	void PlayWeaponSound(USoundBase* Sound) const;
+
+	/** Queues the kick of one shot, both for the view and for the view model. */
+	virtual void ApplyRecoil();
+
+	/** Feeds the queued kick into the control rotation and settles it afterwards. */
+	void UpdateRecoil(float DeltaSeconds);
+
+	/** Drives the procedural aim, kick, reload and bob animation of the view model. */
+	void UpdateViewModel(float DeltaSeconds);
+
+	// -- Runtime animation state ----------------------------------------------
+
+	/** Degrees of upward kick that have been queued but not applied yet. */
+	float PendingRecoilPitch = 0.0f;
+
+	/** Degrees of sideways kick that have been queued but not applied yet. */
+	float PendingRecoilYaw = 0.0f;
+
+	/** Degrees of kick already applied that are still waiting to be given back. */
+	float RecoilToRecover = 0.0f;
+
+	/** 0 while firing from the hip, 1 while fully aimed. */
+	float AimAlpha = 0.0f;
+
+	/** Current backward offset of the view model caused by firing. */
+	float ViewKickOffset = 0.0f;
+
+	/** Current upward rotation of the view model caused by firing. */
+	float ViewKickAngle = 0.0f;
+
+	/** Phase of the walking bob, advanced by speed rather than by time. */
+	float BobPhase = 0.0f;
 
 	/** Character currently holding the weapon. Weak, because the pawn can die. */
 	TWeakObjectPtr<AFRCharacter> OwningCharacter;

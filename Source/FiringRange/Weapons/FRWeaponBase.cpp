@@ -6,6 +6,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 
@@ -58,6 +59,120 @@ void AFRWeaponBase::BeginPlay()
 void AFRWeaponBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	UpdateRecoil(DeltaSeconds);
+	UpdateViewModel(DeltaSeconds);
+}
+
+void AFRWeaponBase::ApplyRecoil()
+{
+	// Queued rather than applied at once. Snapping the view by a full degree in
+	// a single frame reads as a glitch; spreading it over RecoilRiseSpeed reads
+	// as a weapon climbing.
+	PendingRecoilPitch += FMath::FRandRange(RecoilPitchMin, RecoilPitchMax);
+	PendingRecoilYaw += FMath::FRandRange(-RecoilYawMax, RecoilYawMax);
+
+	ViewKickOffset = ViewKickBack;
+	ViewKickAngle = ViewKickPitch;
+}
+
+void AFRWeaponBase::UpdateRecoil(float DeltaSeconds)
+{
+	const UWorld* World = GetWorld();
+	if (!World || !OwningCharacter.IsValid())
+	{
+		return;
+	}
+
+	APlayerController* PlayerController = Cast<APlayerController>(OwningCharacter->GetController());
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	FRotator ControlRotation = PlayerController->GetControlRotation();
+	bool bRotationChanged = false;
+
+	if (PendingRecoilPitch > KINDA_SMALL_NUMBER || FMath::Abs(PendingRecoilYaw) > KINDA_SMALL_NUMBER)
+	{
+		const float PitchStep = FMath::Min(PendingRecoilPitch, RecoilRiseSpeed * DeltaSeconds);
+		const float YawStep = FMath::Clamp(PendingRecoilYaw, -RecoilRiseSpeed * DeltaSeconds, RecoilRiseSpeed * DeltaSeconds);
+
+		// A positive pitch on the control rotation raises the view.
+		ControlRotation.Pitch += PitchStep;
+		ControlRotation.Yaw += YawStep;
+
+		PendingRecoilPitch -= PitchStep;
+		PendingRecoilYaw -= YawStep;
+
+		// Only the part the weapon is willing to give back is remembered. A ratio
+		// below one leaves the player with some climb to correct by hand.
+		RecoilToRecover += PitchStep * RecoilRecoveryRatio;
+		bRotationChanged = true;
+	}
+	else if (RecoilToRecover > KINDA_SMALL_NUMBER &&
+		(World->GetTimeSeconds() - LastFireTime) >= RecoilRecoveryDelay)
+	{
+		const float RecoveryStep = FMath::Min(RecoilToRecover, RecoilRecoverySpeed * DeltaSeconds);
+		ControlRotation.Pitch -= RecoveryStep;
+		RecoilToRecover -= RecoveryStep;
+		bRotationChanged = true;
+	}
+
+	if (bRotationChanged)
+	{
+		// The pitch limits set on the camera manager are re-applied on the next
+		// UpdateRotation, so writing the rotation here cannot break the clamp.
+		PlayerController->SetControlRotation(ControlRotation);
+	}
+}
+
+void AFRWeaponBase::UpdateViewModel(float DeltaSeconds)
+{
+	const bool bAiming = OwningCharacter.IsValid() && OwningCharacter->IsAiming() && !bReloading;
+
+	AimAlpha = FMath::FInterpTo(AimAlpha, bAiming ? 1.0f : 0.0f, DeltaSeconds, AimInterpSpeed);
+
+	// Rest pose: somewhere between the hip and the aim pose.
+	FVector Location = FMath::Lerp(HipLocation, AimLocation, AimAlpha);
+	FRotator Rotation = FMath::Lerp(HipRotation, AimRotation, AimAlpha);
+
+	// Firing pushes the weapon back and tips the muzzle up, then it settles.
+	ViewKickOffset = FMath::FInterpTo(ViewKickOffset, 0.0f, DeltaSeconds, ViewKickRecoverySpeed);
+	ViewKickAngle = FMath::FInterpTo(ViewKickAngle, 0.0f, DeltaSeconds, ViewKickRecoverySpeed);
+
+	Location.X -= ViewKickOffset;
+	Rotation.Pitch += ViewKickAngle;
+
+	// Reload: the weapon drops out of the line of sight and rolls towards the
+	// player, which is the silhouette a magazine change reads as.
+	if (bReloading)
+	{
+		const float Progress = GetReloadProgress();
+
+		// A single sine arch: down at the start, back up as the round seats.
+		const float Arch = FMath::Sin(Progress * PI);
+
+		Location.Z -= ReloadDipDistance * Arch;
+		Location.X -= ReloadDipDistance * 0.35f * Arch;
+		Rotation.Roll += ReloadRollAngle * Arch;
+		Rotation.Pitch -= 8.0f * Arch;
+	}
+
+	// Walking bob. The phase advances with distance travelled instead of with
+	// time, so the weapon is perfectly still while the player stands.
+	if (OwningCharacter.IsValid())
+	{
+		const float Speed2D = OwningCharacter->GetVelocity().Size2D();
+		BobPhase += Speed2D * DeltaSeconds * 0.018f;
+
+		const float BobScale = FMath::Clamp(Speed2D / 400.0f, 0.0f, 1.0f) * (1.0f - AimAlpha * 0.75f);
+		Location.Z += FMath::Sin(BobPhase * 2.0f) * WalkBobAmount * BobScale;
+		Location.Y += FMath::Sin(BobPhase) * WalkBobAmount * 1.4f * BobScale;
+	}
+
+	SetActorRelativeLocation(Location);
+	SetActorRelativeRotation(Rotation);
 }
 
 void AFRWeaponBase::BuildWeaponMesh()
@@ -248,6 +363,7 @@ void AFRWeaponBase::FireOnce()
 
 	LaunchProjectiles();
 	PlayWeaponSound(FireSound);
+	ApplyRecoil();
 
 	// Accuracy is measured per projectile, so a shotgun blast counts as several
 	// shots. Reporting it here keeps the game mode unaware of weapon internals.
