@@ -13,9 +13,13 @@
 
 #include "FRCharacter.generated.h"
 
+class AFRWeaponBase;
 class UCameraComponent;
 class UInputAction;
 class UInputMappingContext;
+
+/** Raised when the player switches weapon, so the HUD can rebind its readouts. */
+DECLARE_MULTICAST_DELEGATE_OneParam(FFROnActiveWeaponChanged, AFRWeaponBase* /*NewWeapon*/);
 
 /**
  * First person character used on the firing range.
@@ -69,6 +73,28 @@ public:
 	/** True while the player holds the aim key. Read by the weapon and by the HUD. */
 	bool IsAiming() const { return bIsAiming; }
 
+	// -- Weapons --------------------------------------------------------------
+
+	/** Weapon currently in the hands of the player, or nullptr before the loadout spawns. */
+	AFRWeaponBase* GetActiveWeapon() const;
+
+	/** Number of weapons in the loadout. */
+	int32 GetWeaponCount() const { return Weapons.Num(); }
+
+	/** Puts the weapon at an index into the hands of the player. */
+	void EquipWeaponAtIndex(int32 Index);
+
+	/** Cycles one weapon forward in the loadout. */
+	void EquipNextWeapon();
+
+	/** Cycles one weapon backward in the loadout. */
+	void EquipPreviousWeapon();
+
+	/** Refills every magazine and the reserve. Used when a session restarts. */
+	void ResetLoadout();
+
+	FFROnActiveWeaponChanged OnActiveWeaponChanged;
+
 protected:
 	// -- Components -----------------------------------------------------------
 
@@ -120,6 +146,30 @@ protected:
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> ActionCrouch;
 
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ActionFire;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ActionAim;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ActionReload;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ActionNextWeapon;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ActionPreviousWeapon;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ActionWeaponSlotOne;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ActionWeaponSlotTwo;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ActionWeaponSlotThree;
+
 	/** Creates every input action and fills the mapping context with key bindings. */
 	virtual void BuildInputActions();
 
@@ -135,6 +185,22 @@ protected:
 	void Input_SprintStarted();
 	void Input_SprintCompleted();
 	void Input_CrouchToggled();
+	void Input_FireStarted();
+	void Input_FireCompleted();
+	void Input_AimStarted();
+	void Input_AimCompleted();
+	void Input_Reload();
+	void Input_NextWeapon();
+	void Input_PreviousWeapon();
+	void Input_WeaponSlotOne();
+	void Input_WeaponSlotTwo();
+	void Input_WeaponSlotThree();
+
+	/** Spawns one actor per entry of WeaponClasses and equips the first one. */
+	void SpawnLoadout();
+
+	/** Interpolates the camera field of view towards the aim or hip value. */
+	void UpdateAimFieldOfView(float DeltaSeconds);
 
 	/** Reads the sensitivity values from the game instance into the cached fields. */
 	void RefreshLookSettings();
@@ -164,6 +230,27 @@ protected:
 
 	/** Returns a valid array index for an ammunition family, or INDEX_NONE. */
 	int32 GetAmmoIndex(EFRAmmoType AmmoType) const;
+
+	// -- Weapon loadout -------------------------------------------------------
+
+	/** Classes spawned into the loadout at BeginPlay, in slot order. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Weapons")
+	TArray<TSubclassOf<AFRWeaponBase>> WeaponClasses;
+
+	/** Live weapon actors, one per entry of WeaponClasses. */
+	UPROPERTY(Transient)
+	TArray<TObjectPtr<AFRWeaponBase>> Weapons;
+
+	/** Index into Weapons of the weapon in hand, or INDEX_NONE. */
+	int32 ActiveWeaponIndex = INDEX_NONE;
+
+	/** Camera field of view while not aiming. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Camera", meta = (ClampMin = "40.0", ClampMax = "130.0"))
+	float HipFieldOfView = 90.0f;
+
+	/** How fast the field of view slides between the hip and the aim value. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Camera", meta = (ClampMin = "1.0"))
+	float FieldOfViewInterpSpeed = 13.0f;
 
 private:
 	/** Cached copy of the mouse sensitivity setting, refreshed when settings change. */

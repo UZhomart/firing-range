@@ -15,6 +15,7 @@
 #include "Core/FRGameInstance.h"
 #include "FiringRange.h"
 #include "Player/FRPlayerController.h"
+#include "Weapons/FRWeaponBase.h"
 
 AFRCharacter::AFRCharacter()
 {
@@ -126,6 +127,7 @@ void AFRCharacter::BeginPlay()
 
 	ResetReserveAmmo();
 	RefreshLookSettings();
+	SpawnLoadout();
 
 	// Settings can change while the range level is running, because the pause
 	// menu exposes the same sliders as the main menu.
@@ -150,6 +152,24 @@ void AFRCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AFRCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	UpdateAimFieldOfView(DeltaSeconds);
+}
+
+void AFRCharacter::UpdateAimFieldOfView(float DeltaSeconds)
+{
+	if (!FirstPersonCamera)
+	{
+		return;
+	}
+
+	const AFRWeaponBase* Weapon = GetActiveWeapon();
+	const float TargetFov = (bIsAiming && Weapon) ? Weapon->GetAimFieldOfView() : HipFieldOfView;
+
+	// Interpolating rather than snapping is what makes aiming read as raising the
+	// weapon instead of as a camera cut.
+	const float NewFov = FMath::FInterpTo(FirstPersonCamera->FieldOfView, TargetFov, DeltaSeconds, FieldOfViewInterpSpeed);
+	FirstPersonCamera->SetFieldOfView(NewFov);
 }
 
 void AFRCharacter::RefreshLookSettings()
@@ -185,6 +205,14 @@ void AFRCharacter::BuildInputActions()
 	ActionJump = CreateInputAction(TEXT("IA_Jump"), EInputActionValueType::Boolean);
 	ActionSprint = CreateInputAction(TEXT("IA_Sprint"), EInputActionValueType::Boolean);
 	ActionCrouch = CreateInputAction(TEXT("IA_Crouch"), EInputActionValueType::Boolean);
+	ActionFire = CreateInputAction(TEXT("IA_Fire"), EInputActionValueType::Boolean);
+	ActionAim = CreateInputAction(TEXT("IA_Aim"), EInputActionValueType::Boolean);
+	ActionReload = CreateInputAction(TEXT("IA_Reload"), EInputActionValueType::Boolean);
+	ActionNextWeapon = CreateInputAction(TEXT("IA_NextWeapon"), EInputActionValueType::Boolean);
+	ActionPreviousWeapon = CreateInputAction(TEXT("IA_PreviousWeapon"), EInputActionValueType::Boolean);
+	ActionWeaponSlotOne = CreateInputAction(TEXT("IA_WeaponSlotOne"), EInputActionValueType::Boolean);
+	ActionWeaponSlotTwo = CreateInputAction(TEXT("IA_WeaponSlotTwo"), EInputActionValueType::Boolean);
+	ActionWeaponSlotThree = CreateInputAction(TEXT("IA_WeaponSlotThree"), EInputActionValueType::Boolean);
 
 	// ----- Movement ---------------------------------------------------------
 	// A single Axis2D action carries both axes. A key press produces 1.0 on X,
@@ -239,6 +267,27 @@ void AFRCharacter::BuildInputActions()
 	InputContext->MapKey(ActionCrouch, EKeys::LeftControl);
 	InputContext->MapKey(ActionCrouch, EKeys::C);
 	InputContext->MapKey(ActionCrouch, EKeys::Gamepad_RightThumbstick);
+
+	// ----- Combat -----------------------------------------------------------
+
+	InputContext->MapKey(ActionFire, EKeys::LeftMouseButton);
+	InputContext->MapKey(ActionFire, EKeys::Gamepad_RightTrigger);
+
+	InputContext->MapKey(ActionAim, EKeys::RightMouseButton);
+	InputContext->MapKey(ActionAim, EKeys::Gamepad_LeftTrigger);
+
+	InputContext->MapKey(ActionReload, EKeys::R);
+	InputContext->MapKey(ActionReload, EKeys::Gamepad_FaceButton_Left);
+
+	InputContext->MapKey(ActionNextWeapon, EKeys::MouseScrollUp);
+	InputContext->MapKey(ActionNextWeapon, EKeys::Gamepad_DPad_Right);
+
+	InputContext->MapKey(ActionPreviousWeapon, EKeys::MouseScrollDown);
+	InputContext->MapKey(ActionPreviousWeapon, EKeys::Gamepad_DPad_Left);
+
+	InputContext->MapKey(ActionWeaponSlotOne, EKeys::One);
+	InputContext->MapKey(ActionWeaponSlotTwo, EKeys::Two);
+	InputContext->MapKey(ActionWeaponSlotThree, EKeys::Three);
 }
 
 void AFRCharacter::PawnClientRestart()
@@ -285,6 +334,20 @@ void AFRCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompone
 	EnhancedInput->BindAction(ActionSprint, ETriggerEvent::Started, this, &AFRCharacter::Input_SprintStarted);
 	EnhancedInput->BindAction(ActionSprint, ETriggerEvent::Completed, this, &AFRCharacter::Input_SprintCompleted);
 	EnhancedInput->BindAction(ActionCrouch, ETriggerEvent::Started, this, &AFRCharacter::Input_CrouchToggled);
+
+	// Fire and aim need both edges of the key: Started to press, Completed to
+	// release, which is what lets an automatic weapon keep firing.
+	EnhancedInput->BindAction(ActionFire, ETriggerEvent::Started, this, &AFRCharacter::Input_FireStarted);
+	EnhancedInput->BindAction(ActionFire, ETriggerEvent::Completed, this, &AFRCharacter::Input_FireCompleted);
+	EnhancedInput->BindAction(ActionAim, ETriggerEvent::Started, this, &AFRCharacter::Input_AimStarted);
+	EnhancedInput->BindAction(ActionAim, ETriggerEvent::Completed, this, &AFRCharacter::Input_AimCompleted);
+
+	EnhancedInput->BindAction(ActionReload, ETriggerEvent::Started, this, &AFRCharacter::Input_Reload);
+	EnhancedInput->BindAction(ActionNextWeapon, ETriggerEvent::Started, this, &AFRCharacter::Input_NextWeapon);
+	EnhancedInput->BindAction(ActionPreviousWeapon, ETriggerEvent::Started, this, &AFRCharacter::Input_PreviousWeapon);
+	EnhancedInput->BindAction(ActionWeaponSlotOne, ETriggerEvent::Started, this, &AFRCharacter::Input_WeaponSlotOne);
+	EnhancedInput->BindAction(ActionWeaponSlotTwo, ETriggerEvent::Started, this, &AFRCharacter::Input_WeaponSlotTwo);
+	EnhancedInput->BindAction(ActionWeaponSlotThree, ETriggerEvent::Started, this, &AFRCharacter::Input_WeaponSlotThree);
 }
 
 void AFRCharacter::Input_Move(const FInputActionValue& Value)
@@ -312,7 +375,10 @@ void AFRCharacter::Input_Look(const FInputActionValue& Value)
 		return;
 	}
 
-	const float Sensitivity = CachedMouseSensitivity;
+	// Aiming narrows the field of view, so the same mouse movement would sweep
+	// across far more of the world. Scaling the sensitivity down keeps the feel
+	// of the aim consistent with the hip.
+	const float Sensitivity = CachedMouseSensitivity * (bIsAiming ? CachedAimSensitivityScale : 1.0f);
 	const float VerticalSign = bCachedInvertLookY ? -1.0f : 1.0f;
 
 	AddControllerYawInput(Axis.X * Sensitivity);
@@ -363,5 +429,183 @@ void AFRCharacter::UpdateMovementSpeed()
 		return;
 	}
 
-	Movement->MaxWalkSpeed = (bWantsToSprint && !bIsCrouched) ? SprintSpeed : WalkSpeed;
+	// Aiming beats sprinting: a player holding both keys is aiming, and walks at
+	// the slower, steadier pace that goes with it.
+	if (bIsAiming)
+	{
+		Movement->MaxWalkSpeed = AimWalkSpeed;
+	}
+	else if (bWantsToSprint && !bIsCrouched)
+	{
+		Movement->MaxWalkSpeed = SprintSpeed;
+	}
+	else
+	{
+		Movement->MaxWalkSpeed = WalkSpeed;
+	}
+}
+
+// -- Weapon loadout ----------------------------------------------------------
+
+void AFRCharacter::SpawnLoadout()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	if (WeaponClasses.Num() == 0)
+	{
+		UE_LOG(LogFiringRange, Warning, TEXT("Character has an empty weapon loadout."));
+		return;
+	}
+
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	for (const TSubclassOf<AFRWeaponBase>& WeaponClass : WeaponClasses)
+	{
+		if (!WeaponClass)
+		{
+			continue;
+		}
+
+		AFRWeaponBase* Weapon = World->SpawnActor<AFRWeaponBase>(WeaponClass, GetActorTransform(), SpawnParams);
+		if (!Weapon)
+		{
+			continue;
+		}
+
+		// Every weapon starts holstered. Equipping one is what makes it visible.
+		Weapon->OnUnequipped();
+		Weapons.Add(Weapon);
+	}
+
+	EquipWeaponAtIndex(0);
+}
+
+AFRWeaponBase* AFRCharacter::GetActiveWeapon() const
+{
+	return Weapons.IsValidIndex(ActiveWeaponIndex) ? Weapons[ActiveWeaponIndex] : nullptr;
+}
+
+void AFRCharacter::EquipWeaponAtIndex(int32 Index)
+{
+	if (!Weapons.IsValidIndex(Index) || Index == ActiveWeaponIndex)
+	{
+		return;
+	}
+
+	if (AFRWeaponBase* Previous = GetActiveWeapon())
+	{
+		Previous->OnUnequipped();
+	}
+
+	ActiveWeaponIndex = Index;
+
+	AFRWeaponBase* Current = Weapons[Index];
+	Current->OnEquipped(this);
+
+	OnActiveWeaponChanged.Broadcast(Current);
+}
+
+void AFRCharacter::EquipNextWeapon()
+{
+	if (Weapons.Num() < 2)
+	{
+		return;
+	}
+
+	EquipWeaponAtIndex((ActiveWeaponIndex + 1) % Weapons.Num());
+}
+
+void AFRCharacter::EquipPreviousWeapon()
+{
+	if (Weapons.Num() < 2)
+	{
+		return;
+	}
+
+	EquipWeaponAtIndex((ActiveWeaponIndex - 1 + Weapons.Num()) % Weapons.Num());
+}
+
+void AFRCharacter::ResetLoadout()
+{
+	ResetReserveAmmo();
+
+	for (AFRWeaponBase* Weapon : Weapons)
+	{
+		if (Weapon)
+		{
+			Weapon->ResetToFullMagazine();
+		}
+	}
+
+	EquipWeaponAtIndex(0);
+}
+
+// -- Combat input ------------------------------------------------------------
+
+void AFRCharacter::Input_FireStarted()
+{
+	if (AFRWeaponBase* Weapon = GetActiveWeapon())
+	{
+		Weapon->StartFire();
+	}
+}
+
+void AFRCharacter::Input_FireCompleted()
+{
+	if (AFRWeaponBase* Weapon = GetActiveWeapon())
+	{
+		Weapon->StopFire();
+	}
+}
+
+void AFRCharacter::Input_AimStarted()
+{
+	bIsAiming = true;
+	UpdateMovementSpeed();
+}
+
+void AFRCharacter::Input_AimCompleted()
+{
+	bIsAiming = false;
+	UpdateMovementSpeed();
+}
+
+void AFRCharacter::Input_Reload()
+{
+	if (AFRWeaponBase* Weapon = GetActiveWeapon())
+	{
+		Weapon->StartReload();
+	}
+}
+
+void AFRCharacter::Input_NextWeapon()
+{
+	EquipNextWeapon();
+}
+
+void AFRCharacter::Input_PreviousWeapon()
+{
+	EquipPreviousWeapon();
+}
+
+void AFRCharacter::Input_WeaponSlotOne()
+{
+	EquipWeaponAtIndex(0);
+}
+
+void AFRCharacter::Input_WeaponSlotTwo()
+{
+	EquipWeaponAtIndex(1);
+}
+
+void AFRCharacter::Input_WeaponSlotThree()
+{
+	EquipWeaponAtIndex(2);
 }
