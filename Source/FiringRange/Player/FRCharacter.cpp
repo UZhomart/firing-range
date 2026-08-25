@@ -15,6 +15,7 @@
 #include "Core/FRGameInstance.h"
 #include "FiringRange.h"
 #include "Player/FRPlayerController.h"
+#include "Weapons/FRPistol.h"
 #include "Weapons/FRWeaponBase.h"
 
 AFRCharacter::AFRCharacter()
@@ -65,6 +66,9 @@ AFRCharacter::AFRCharacter()
 	MaxReserveAmmoPerType[static_cast<int32>(EFRAmmoType::Pistol)] = 180;
 	MaxReserveAmmoPerType[static_cast<int32>(EFRAmmoType::Shell)] = 80;
 	MaxReserveAmmoPerType[static_cast<int32>(EFRAmmoType::Rifle)] = 60;
+
+	// Slot order is the order of the number keys on the keyboard.
+	WeaponClasses.Add(AFRPistol::StaticClass());
 }
 
 int32 AFRCharacter::GetAmmoIndex(EFRAmmoType AmmoType) const
