@@ -17,6 +17,7 @@
 #include "Player/FRPlayerController.h"
 #include "Weapons/FRPistol.h"
 #include "Weapons/FRShotgun.h"
+#include "Weapons/FRSniperRifle.h"
 #include "Weapons/FRWeaponBase.h"
 
 AFRCharacter::AFRCharacter()
@@ -71,6 +72,7 @@ AFRCharacter::AFRCharacter()
 	// Slot order is the order of the number keys on the keyboard.
 	WeaponClasses.Add(AFRPistol::StaticClass());
 	WeaponClasses.Add(AFRShotgun::StaticClass());
+	WeaponClasses.Add(AFRSniperRifle::StaticClass());
 }
 
 int32 AFRCharacter::GetAmmoIndex(EFRAmmoType AmmoType) const
