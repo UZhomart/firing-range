@@ -30,6 +30,7 @@ public:
 	AFRProjectile();
 
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	/**
 	 * Prepares a freshly spawned bullet. Must be called between SpawnActorDeferred
@@ -78,6 +79,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Projectile")
 	float MaxFlightTime = 5.0f;
 
+	/**
+	 * Tells the game mode how this bullet ended.
+	 *
+	 * Reported exactly once, whether the bullet struck something or simply ran
+	 * out of flight time, because the accuracy figure counts every projectile
+	 * that left the muzzle.
+	 */
+	void ReportOutcome(bool bScored);
+
 	UFUNCTION()
 	void HandleHit(
 		UPrimitiveComponent* HitComponent,
@@ -90,4 +100,7 @@ private:
 	/** Sound played at the impact point. Optional, assigned by the weapon. */
 	UPROPERTY(Transient)
 	TObjectPtr<USoundBase> ImpactSound = nullptr;
+
+	/** Guards against reporting the outcome of the same bullet twice. */
+	bool bOutcomeReported = false;
 };

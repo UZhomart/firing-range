@@ -8,6 +8,7 @@
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 
+#include "Core/FRRangeGameMode.h"
 #include "Core/FRVisualUtils.h"
 #include "Weapons/FRImpactEffect.h"
 
@@ -83,6 +84,37 @@ void AFRProjectile::BeginPlay()
 	TracerMesh->SetRelativeScale3D(FVector(BulletRadius * 2.0f / 100.0f, BulletRadius * 2.0f / 100.0f, TracerLength / 100.0f));
 }
 
+void AFRProjectile::ReportOutcome(bool bScored)
+{
+	if (bOutcomeReported)
+	{
+		return;
+	}
+
+	bOutcomeReported = true;
+
+	if (UWorld* World = GetWorld())
+	{
+		if (AFRRangeGameMode* GameMode = World->GetAuthGameMode<AFRRangeGameMode>())
+		{
+			GameMode->NotifyProjectileResolved(bScored);
+		}
+	}
+}
+
+void AFRProjectile::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// A bullet that simply ran out of flight time never called HandleHit, and it
+	// is still a miss. Only a genuine destruction counts: a level change must not
+	// register misses for everything that happened to be in the air.
+	if (EndPlayReason == EEndPlayReason::Destroyed)
+	{
+		ReportOutcome(false);
+	}
+
+	Super::EndPlay(EndPlayReason);
+}
+
 float AFRProjectile::GetGravityScale() const
 {
 	return ProjectileMovement ? ProjectileMovement->ProjectileGravityScale : 0.0f;
@@ -101,9 +133,12 @@ void AFRProjectile::HandleHit(
 	// call. That keeps the bullet unaware of what a target is: anything that
 	// overrides TakeDamage can react to being shot, and the target decides for
 	// itself which of its zones was struck.
+	bool bScored = false;
 	if (OtherActor && OtherActor != this)
 	{
-		UGameplayStatics::ApplyPointDamage(
+		// A target returns the damage it accepted and zero for a non scoring part
+		// such as its post, so the return value doubles as the scoring answer.
+		const float AppliedDamage = UGameplayStatics::ApplyPointDamage(
 			OtherActor,
 			Damage,
 			ShotDirection,
@@ -111,7 +146,11 @@ void AFRProjectile::HandleHit(
 			GetInstigatorController(),
 			this,
 			UDamageType::StaticClass());
+
+		bScored = AppliedDamage > 0.0f;
 	}
+
+	ReportOutcome(bScored);
 
 	const FVector ImpactNormal = Hit.ImpactNormal.IsNearlyZero() ? -ShotDirection : Hit.ImpactNormal;
 	AFRImpactEffect::PlayImpactFeedback(this, Hit.ImpactPoint, ImpactNormal, TracerColor, ImpactSound);
