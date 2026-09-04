@@ -10,6 +10,7 @@
 #include "FiringRange.h"
 #include "Pickups/FRAmmoPickup.h"
 #include "Player/FRCharacter.h"
+#include "Player/FRHUD.h"
 #include "Player/FRPlayerController.h"
 #include "Targets/FRTargetBase.h"
 #include "Weapons/FRWeaponBase.h"
@@ -21,6 +22,7 @@ AFRRangeGameMode::AFRRangeGameMode()
 	DefaultPawnClass = AFRCharacter::StaticClass();
 	PlayerControllerClass = AFRPlayerController::StaticClass();
 	GameStateClass = AFRRangeGameState::StaticClass();
+	HUDClass = AFRHUD::StaticClass();
 
 	// A tighter group is worth more. The head is the hardest zone on the board
 	// and pays the most, which is what the bonus in the brief asks for.
