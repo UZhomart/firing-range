@@ -73,6 +73,9 @@ protected:
 	/** Floating labels for the hits that just landed. */
 	void DrawHitMarkers();
 
+	/** Countdown bar while a timed run is going, result panel once it ends. */
+	void DrawChallengeBanner();
+
 	/** Key reminders along the bottom edge. */
 	void DrawControlHints();
 

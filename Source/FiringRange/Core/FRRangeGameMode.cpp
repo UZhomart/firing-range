@@ -17,6 +17,10 @@
 
 AFRRangeGameMode::AFRRangeGameMode()
 {
+	// The challenge clock runs on the game mode, so the mode has to tick.
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
+
 	// Every framework class of the session is native C++. Nothing here points at
 	// a Blueprint, which is what lets the project ship without binary assets.
 	DefaultPawnClass = AFRCharacter::StaticClass();
@@ -38,6 +42,80 @@ void AFRRangeGameMode::BeginPlay()
 
 	RegisterExistingTargets();
 	ApplyDifficultyToTargets();
+}
+
+void AFRRangeGameMode::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if (!IsChallengeRunning())
+	{
+		return;
+	}
+
+	AFRRangeGameState* RangeState = GetRangeGameState();
+	if (!RangeState)
+	{
+		return;
+	}
+
+	const float Remaining = RangeState->GetChallengeTimeRemaining() - DeltaSeconds;
+	RangeState->SetChallengeTimeRemaining(Remaining);
+
+	if (Remaining <= 0.0f)
+	{
+		EndTimedChallenge();
+	}
+}
+
+bool AFRRangeGameMode::IsChallengeRunning() const
+{
+	const AFRRangeGameState* RangeState = GetRangeGameState();
+	return RangeState && RangeState->GetSessionState() == EFRSessionState::Challenge;
+}
+
+void AFRRangeGameMode::StartTimedChallenge()
+{
+	AFRRangeGameState* RangeState = GetRangeGameState();
+	if (!RangeState)
+	{
+		return;
+	}
+
+	// RestartRange clears the board first, so a challenge always begins from a
+	// clean scoreboard and a full range whatever the player was doing before.
+	RestartRange();
+
+	RangeState->SetChallengeDuration(ChallengeDuration);
+	RangeState->SetChallengeTimeRemaining(ChallengeDuration);
+	RangeState->SetSessionState(EFRSessionState::Challenge);
+
+	UE_LOG(LogFiringRange, Log, TEXT("Timed challenge started: %.0f seconds."), ChallengeDuration);
+}
+
+void AFRRangeGameMode::EndTimedChallenge()
+{
+	AFRRangeGameState* RangeState = GetRangeGameState();
+	if (!RangeState)
+	{
+		return;
+	}
+
+	const FFRRangeStats& Stats = RangeState->GetStats();
+
+	RangeState->SetChallengeTimeRemaining(0.0f);
+	RangeState->SetLastChallengeScore(Stats.Score);
+	RangeState->SetSessionState(EFRSessionState::ChallengeEnded);
+
+	// The record is only kept when it is actually a record, which the game
+	// instance decides, because it is the thing that owns the saved file.
+	if (UFRGameInstance* GameInstance = UFRGameInstance::Get(this))
+	{
+		GameInstance->SubmitChallengeResult(Stats.Score, Stats.GetAccuracy());
+	}
+
+	UE_LOG(LogFiringRange, Log, TEXT("Timed challenge finished with %d points at %s accuracy."),
+		Stats.Score, *Stats.GetAccuracyText());
 }
 
 AFRRangeGameState* AFRRangeGameMode::GetRangeGameState() const

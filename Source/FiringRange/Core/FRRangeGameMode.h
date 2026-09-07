@@ -30,6 +30,7 @@ public:
 	AFRRangeGameMode();
 
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
 
 	/**
@@ -48,6 +49,21 @@ public:
 
 	/** Points a hit in this zone is worth before the distance bonus. */
 	int32 GetZoneScore(EFRHitZone Zone) const;
+
+	/**
+	 * Starts a timed run.
+	 *
+	 * A challenge is a restart with a clock attached: the scoreboard is cleared,
+	 * every target stands back up, and from then on the session is measured
+	 * against ChallengeDuration rather than being open ended.
+	 */
+	void StartTimedChallenge();
+
+	/** Ends the run, keeps the result and offers it as a new personal best. */
+	void EndTimedChallenge();
+
+	/** True while a timed run is counting down. */
+	bool IsChallengeRunning() const;
 
 protected:
 	// -- Scoring rules ---------------------------------------------------------

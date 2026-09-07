@@ -88,6 +88,10 @@ protected:
 	UPROPERTY(Transient)
 	TObjectPtr<UInputAction> ActionPause;
 
+	/** Starts a timed run without leaving the range. */
+	UPROPERTY(Transient)
+	TObjectPtr<UInputAction> ActionChallenge;
+
 	/** Lowest pitch the camera may reach, in degrees. */
 	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Camera")
 	float ViewPitchMin = -80.0f;
@@ -98,6 +102,7 @@ protected:
 
 private:
 	void Input_Pause();
+	void Input_StartChallenge();
 
 	/** Builds the controller owned input action and mapping context. */
 	void BuildControllerInput();

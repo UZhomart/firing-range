@@ -52,6 +52,15 @@ void AFRPlayerController::BuildControllerInput()
 
 	ControllerInputContext->MapKey(ActionPause, EKeys::Escape);
 	ControllerInputContext->MapKey(ActionPause, EKeys::Gamepad_Special_Right);
+
+	// The challenge key lives on the controller rather than on the character,
+	// because starting a run is a session level decision, not an action of the
+	// body holding the weapon.
+	ActionChallenge = NewObject<UInputAction>(this, TEXT("IA_StartChallenge"));
+	ActionChallenge->ValueType = EInputActionValueType::Boolean;
+
+	ControllerInputContext->MapKey(ActionChallenge, EKeys::T);
+	ControllerInputContext->MapKey(ActionChallenge, EKeys::Gamepad_FaceButton_Top);
 }
 
 void AFRPlayerController::SetupInputComponent()
@@ -69,6 +78,7 @@ void AFRPlayerController::SetupInputComponent()
 	if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(InputComponent))
 	{
 		EnhancedInput->BindAction(ActionPause, ETriggerEvent::Started, this, &AFRPlayerController::Input_Pause);
+		EnhancedInput->BindAction(ActionChallenge, ETriggerEvent::Started, this, &AFRPlayerController::Input_StartChallenge);
 	}
 	else
 	{
@@ -106,6 +116,22 @@ void AFRPlayerController::SetMenuInputMode(TSharedPtr<SWidget> WidgetToFocus)
 void AFRPlayerController::Input_Pause()
 {
 	TogglePauseMenu();
+}
+
+void AFRPlayerController::Input_StartChallenge()
+{
+	// Pressing the key during a run has no effect: restarting a challenge by
+	// accident in its last seconds would throw away the whole attempt.
+	if (UWorld* World = GetWorld())
+	{
+		if (AFRRangeGameMode* GameMode = World->GetAuthGameMode<AFRRangeGameMode>())
+		{
+			if (!GameMode->IsChallengeRunning())
+			{
+				GameMode->StartTimedChallenge();
+			}
+		}
+	}
 }
 
 void AFRPlayerController::TogglePauseMenu()

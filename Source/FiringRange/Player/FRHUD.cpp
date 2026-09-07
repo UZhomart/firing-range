@@ -114,6 +114,7 @@ void AFRHUD::DrawHUD()
 	DrawWeaponPanel();
 	DrawCrosshair();
 	DrawHitMarkers();
+	DrawChallengeBanner();
 	DrawControlHints();
 }
 
@@ -333,9 +334,74 @@ void AFRHUD::DrawHitMarkers()
 	}
 }
 
+void AFRHUD::DrawChallengeBanner()
+{
+	const AFRRangeGameState* RangeState = CachedGameState.Get();
+	if (!RangeState)
+	{
+		return;
+	}
+
+	const EFRSessionState Session = RangeState->GetSessionState();
+	if (Session == EFRSessionState::FreePractice)
+	{
+		return;
+	}
+
+	const float BannerWidth = 420.0f;
+	const float BannerHeight = 64.0f;
+	const float BannerX = (Canvas->SizeX - BannerWidth) * 0.5f;
+	const float BannerY = 24.0f;
+
+	DrawPanel(BannerX, BannerY, BannerWidth, BannerHeight, PanelColor);
+
+	if (Session == EFRSessionState::Challenge)
+	{
+		const float Remaining = RangeState->GetChallengeTimeRemaining();
+		const float Duration = FMath::Max(RangeState->GetChallengeDuration(), KINDA_SMALL_NUMBER);
+
+		// The bar turns red in the last five seconds, which is the moment the
+		// player stops aiming carefully and starts rushing.
+		const FLinearColor BarColor = (Remaining <= 5.0f) ? WarningColor : AccentColor;
+
+		const FString TimeText = FString::Printf(TEXT("CHALLENGE   %02d:%02d"),
+			FMath::FloorToInt(Remaining / 60.0f), FMath::FloorToInt(FMath::Fmod(Remaining, 60.0f)));
+
+		float Width = 0.0f;
+		float Height = 0.0f;
+		GetTextSize(TimeText, Width, Height, GEngine->GetLargeFont(), 1.0f);
+
+		DrawText(TimeText, BarColor, BannerX + (BannerWidth - Width) * 0.5f, BannerY + 8.0f,
+			GEngine->GetLargeFont(), 1.0f, false);
+
+		DrawProgressBar(BannerX + 16.0f, BannerY + BannerHeight - 14.0f, BannerWidth - 32.0f, 6.0f,
+			Remaining / Duration, BarColor);
+	}
+	else
+	{
+		const FFRRangeStats& Stats = RangeState->GetStats();
+
+		const FString ResultText = FString::Printf(TEXT("TIME UP    %d POINTS    %s"),
+			RangeState->GetLastChallengeScore(), *Stats.GetAccuracyText());
+
+		float Width = 0.0f;
+		float Height = 0.0f;
+		GetTextSize(ResultText, Width, Height, GEngine->GetLargeFont(), 1.0f);
+
+		DrawText(ResultText, AccentColor, BannerX + (BannerWidth - Width) * 0.5f, BannerY + 10.0f,
+			GEngine->GetLargeFont(), 1.0f, false);
+
+		const FString HintText = TEXT("Press T to run it again");
+		GetTextSize(HintText, Width, Height, GEngine->GetSmallFont(), 1.0f);
+
+		DrawText(HintText, TextColor, BannerX + (BannerWidth - Width) * 0.5f, BannerY + BannerHeight - 22.0f,
+			GEngine->GetSmallFont(), 1.0f, false);
+	}
+}
+
 void AFRHUD::DrawControlHints()
 {
-	const FString Hints = TEXT("LMB fire    RMB aim    R reload    1 2 3 weapons    Esc pause");
+	const FString Hints = TEXT("LMB fire    RMB aim    R reload    1 2 3 weapons    T challenge    Esc pause");
 
 	float Width = 0.0f;
 	float Height = 0.0f;
