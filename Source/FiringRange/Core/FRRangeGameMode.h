@@ -9,6 +9,7 @@
 
 #include "FRRangeGameMode.generated.h"
 
+class AFRRangeBuilder;
 class AFRRangeGameState;
 class AFRTargetBase;
 class AFRWeaponBase;
@@ -29,6 +30,7 @@ class FIRINGRANGE_API AFRRangeGameMode : public AGameModeBase
 public:
 	AFRRangeGameMode();
 
+	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void HandleStartingNewPlayer_Implementation(APlayerController* NewPlayer) override;
@@ -83,6 +85,15 @@ protected:
 
 	// -- Internals -------------------------------------------------------------
 
+	/**
+	 * Makes sure the range exists before the first player is given a pawn.
+	 *
+	 * A builder already placed in the level is used as it is; otherwise one is
+	 * created. Running during InitGame is what guarantees the ground and the
+	 * player start are there by the time the character spawns.
+	 */
+	void EnsureRangeBuilt();
+
 	/** Finds every target already in the level and starts listening to it. */
 	void RegisterExistingTargets();
 
@@ -103,6 +114,10 @@ protected:
 
 	/** Convenience accessor for the typed game state. */
 	AFRRangeGameState* GetRangeGameState() const;
+
+	/** Builder that created the range, whether it was placed or generated. */
+	UPROPERTY(Transient)
+	TObjectPtr<AFRRangeBuilder> RangeBuilder;
 
 	/** Targets taking part in the session. */
 	UPROPERTY(Transient)

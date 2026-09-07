@@ -8,6 +8,7 @@
 #include "Core/FRGameInstance.h"
 #include "Core/FRRangeGameState.h"
 #include "FiringRange.h"
+#include "Level/FRRangeBuilder.h"
 #include "Pickups/FRAmmoPickup.h"
 #include "Player/FRCharacter.h"
 #include "Player/FRHUD.h"
@@ -36,12 +37,50 @@ AFRRangeGameMode::AFRRangeGameMode()
 	ZoneScores.Add(EFRHitZone::Head, 75);
 }
 
+void AFRRangeGameMode::InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage)
+{
+	Super::InitGame(MapName, Options, ErrorMessage);
+
+	EnsureRangeBuilt();
+}
+
 void AFRRangeGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
 	RegisterExistingTargets();
 	ApplyDifficultyToTargets();
+}
+
+void AFRRangeGameMode::EnsureRangeBuilt()
+{
+	UWorld* World = GetWorld();
+	if (!World || RangeBuilder)
+	{
+		return;
+	}
+
+	// A builder placed by hand in the level wins, so the generated range can
+	// always be replaced by an authored one without touching this class.
+	for (TActorIterator<AFRRangeBuilder> It(World); It; ++It)
+	{
+		RangeBuilder = *It;
+		break;
+	}
+
+	if (!RangeBuilder)
+	{
+		FActorSpawnParameters SpawnParams;
+		SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+		RangeBuilder = World->SpawnActor<AFRRangeBuilder>(
+			AFRRangeBuilder::StaticClass(), FVector::ZeroVector, FRotator::ZeroRotator, SpawnParams);
+	}
+
+	if (RangeBuilder)
+	{
+		RangeBuilder->BuildRange();
+	}
 }
 
 void AFRRangeGameMode::Tick(float DeltaSeconds)
