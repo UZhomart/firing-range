@@ -8,7 +8,13 @@
 #include "InputAction.h"
 #include "InputMappingContext.h"
 
+#include "Core/FRGameInstance.h"
+#include "Core/FRRangeGameMode.h"
+#include "Core/FRRangeGameState.h"
+#include "Engine/GameViewportClient.h"
 #include "FiringRange.h"
+#include "Kismet/GameplayStatics.h"
+#include "UI/SFRPauseMenu.h"
 
 AFRPlayerController::AFRPlayerController()
 {
@@ -147,11 +153,66 @@ void AFRPlayerController::ClosePauseMenu()
 
 void AFRPlayerController::OnPauseMenuOpened()
 {
-	// Base implementation only switches the input mode. The widget itself is
-	// created by the override that knows about the pause menu.
-	SetMenuInputMode(nullptr);
+	UWorld* World = GetWorld();
+	UGameViewportClient* Viewport = World ? World->GetGameViewport() : nullptr;
+
+	if (!Viewport || PauseMenuWidget.IsValid())
+	{
+		SetMenuInputMode(nullptr);
+		return;
+	}
+
+	PauseMenuWidget = SNew(SFRPauseMenu)
+		.GameInstance(UFRGameInstance::Get(this))
+		.RangeGameState(World->GetGameState<AFRRangeGameState>())
+		.OnResume(FSimpleDelegate::CreateUObject(this, &AFRPlayerController::ClosePauseMenu))
+		.OnRestart(FSimpleDelegate::CreateUObject(this, &AFRPlayerController::HandleRestartRange))
+		.OnQuitToMainMenu(FSimpleDelegate::CreateUObject(this, &AFRPlayerController::HandleQuitToMainMenu));
+
+	// A high z order keeps the menu above the canvas HUD, which keeps drawing
+	// underneath while the world is frozen.
+	Viewport->AddViewportWidgetContent(PauseMenuWidget.ToSharedRef(), 20);
+
+	SetMenuInputMode(PauseMenuWidget);
 }
 
 void AFRPlayerController::OnPauseMenuClosed()
 {
+	if (!PauseMenuWidget.IsValid())
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (UGameViewportClient* Viewport = World ? World->GetGameViewport() : nullptr)
+	{
+		Viewport->RemoveViewportWidgetContent(PauseMenuWidget.ToSharedRef());
+	}
+
+	PauseMenuWidget.Reset();
+}
+
+void AFRPlayerController::HandleRestartRange()
+{
+	// The rules of a restart belong to the game mode. The controller only asks
+	// for one and then gets out of the way.
+	if (UWorld* World = GetWorld())
+	{
+		if (AFRRangeGameMode* GameMode = World->GetAuthGameMode<AFRRangeGameMode>())
+		{
+			GameMode->RestartRange();
+		}
+	}
+
+	ClosePauseMenu();
+}
+
+void AFRPlayerController::HandleQuitToMainMenu()
+{
+	// Unpause before travelling: a world left paused on the way out would arrive
+	// at the menu map with its time dilation still frozen.
+	ClosePauseMenu();
+
+	UE_LOG(LogFiringRange, Log, TEXT("Returning to %s."), *MainMenuLevelName.ToString());
+	UGameplayStatics::OpenLevel(this, MainMenuLevelName);
 }

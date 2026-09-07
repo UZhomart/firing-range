@@ -7,9 +7,10 @@
 
 #include "FRPlayerController.generated.h"
 
+class SFRPauseMenu;
+class SWidget;
 class UInputAction;
 class UInputMappingContext;
-class SWidget;
 
 /**
  * Player controller used on the firing range map.
@@ -70,6 +71,16 @@ protected:
 	/** Called right before the world is unpaused. Tears the widget down. */
 	virtual void OnPauseMenuClosed();
 
+	/** Map opened by the main menu entry of the pause screen. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Menu")
+	FName MainMenuLevelName = TEXT("/Game/Maps/MainMenu");
+
+	/** Resets the session and closes the pause menu. */
+	void HandleRestartRange();
+
+	/** Leaves the range and returns to the front end. */
+	void HandleQuitToMainMenu();
+
 	/** Mapping context owned by the controller, added above the pawn context. */
 	UPROPERTY(Transient)
 	TObjectPtr<UInputMappingContext> ControllerInputContext;
@@ -92,4 +103,7 @@ private:
 	void BuildControllerInput();
 
 	bool bPauseMenuOpen = false;
+
+	/** Live pause widget, valid only while the menu is open. */
+	TSharedPtr<SFRPauseMenu> PauseMenuWidget;
 };
