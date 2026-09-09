@@ -81,8 +81,13 @@ void AFRMenuPlayerController::HandleStartGame()
 	// over the level that is loading.
 	HideMainMenu();
 
+	// The game mode is passed in the travel URL rather than being read from the
+	// World Settings of the map. That makes the range map work even when it was
+	// created as a plain empty level and never configured by hand.
+	const FString TravelOptions = TEXT("game=/Script/FiringRange.FRRangeGameMode");
+
 	UE_LOG(LogFiringRange, Log, TEXT("Opening range level %s."), *RangeLevelName.ToString());
-	UGameplayStatics::OpenLevel(this, RangeLevelName);
+	UGameplayStatics::OpenLevel(this, RangeLevelName, true, TravelOptions);
 }
 
 void AFRMenuPlayerController::HandleQuitGame()
