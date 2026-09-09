@@ -132,8 +132,13 @@ UMaterialInstanceDynamic* FRVisual::BuildMesh(
 
 	if (bCollides)
 	{
+		// BlockAllDynamic rather than BlockAll. Both stop everything, but BlockAll
+		// declares the body as world static, and every collider in this project is
+		// created at runtime, with the target boards actually moving. A static body
+		// that moves is a contradiction the physics scene has to work around on
+		// every frame.
 		MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-		MeshComponent->SetCollisionProfileName(TEXT("BlockAll"));
+		MeshComponent->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 	}
 	else
 	{
