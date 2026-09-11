@@ -1,401 +1,393 @@
 # Firing Range
 
-> **This is an educational project.** It was written as a learning exercise for the
-> Firing Range assignment and is not a commercial product. Everything in this
-> repository exists to demonstrate how the systems of a first person shooter fit
-> together, and the code is commented with that goal in mind rather than for
-> brevity.
+> **Учебный проект.** Сделан в рамках задания Firing Range, коммерческим продуктом
+> не является. Код написан и прокомментирован так, чтобы по нему было видно, как
+> устроены системы шутера от первого лица, а не так, чтобы было покороче.
 
-**Authors:** zutemiss and dshadykh
-**Engine:** Unreal Engine 5.5
-**Language:** C++ only, no Blueprints
-**Platforms:** Windows, Linux, macOS
+**Авторы:** zutemiss, dshadykh
+**Движок:** Unreal Engine 5.5
+**Язык:** только C++, без Blueprints
+**Платформы:** Windows, Linux, macOS
 
-A first person marksmanship range: a weapon system with three firearms, physics
-driven bullets, stationary and AI driven moving targets, ammunition pickups, a
-head up display that reports accuracy, a main menu on its own map, a pause menu
-and a timed challenge mode.
+*[English version](README.en.md)*
 
----
-
-## Contents
-
-1. [What makes this project unusual](#what-makes-this-project-unusual)
-2. [Getting it running](#getting-it-running)
-3. [Controls](#controls)
-4. [Repository structure](#repository-structure)
-5. [How the systems fit together](#how-the-systems-fit-together)
-6. [Design decisions worth knowing about](#design-decisions-worth-knowing-about)
-7. [Assignment checklist](#assignment-checklist)
+Тир от первого лица: три ствола, физические пули, статичные и движущиеся мишени
+под управлением ИИ, ящики с патронами, HUD с точностью стрельбы, главное меню на
+отдельной карте, пауза и режим на время.
 
 ---
 
-## What makes this project unusual
+## Содержание
 
-**There is not a single binary asset in this repository.**
+1. [Что скачать](#что-скачать)
+2. [Установка](#установка)
+3. [Управление](#управление)
+4. [Структура проекта](#структура-проекта)
+5. [Особенность проекта](#особенность-проекта)
+6. [Как это устроено](#как-это-устроено)
+7. [Соответствие заданию](#соответствие-заданию)
 
-The brief allows either Blueprints or C++. This project takes C++ all the way,
-and then goes one step further: it also avoids every kind of authored content.
-No meshes, no textures, no materials, no sounds, no animations, no UMG widgets,
-no input assets, and no level geometry are committed.
+---
 
-Everything is built at runtime from what ships inside the engine:
+## Что скачать
 
-| Normally an asset | Here instead |
+| Что | Ссылка | Размер | Зачем |
+|---|---|---|---|
+| **Visual Studio 2022 Community** | https://visualstudio.microsoft.com/vs/community/ | ~10–12 ГБ | Компилятор C++. Ставится **первым** |
+| **Аккаунт Epic Games** | https://www.epicgames.com/id/register | — | Нужен для загрузки движка, бесплатный |
+| **Unreal Engine 5.5** | https://www.unrealengine.com/en-US/download | ~35–40 ГБ | Сам движок |
+| Git LFS *(опционально)* | https://git-lfs.com | ~10 МБ | Только если будете класть в репозиторий собранный билд |
+
+**Требования к месту:** около 63 ГБ свободного пространства (движок + Visual Studio
++ артефакты сборки).
+
+---
+
+## Установка
+
+### 1. Visual Studio 2022
+
+Скачать по ссылке выше → запустить `VisualStudioSetup.exe` → в окне выбора
+компонентов отметить две рабочие нагрузки:
+
+- ☑ **Разработка игр на C++** (Game development with C++)
+- ☑ **Разработка классических приложений на C++** (Desktop development with C++)
+
+Больше ничего отмечать не нужно. Нажать **Установить**.
+
+> Порядок важен: установщик Unreal при запуске ищет компилятор MSVC. Если
+> Visual Studio ещё нет, движок встанет без поддержки C++.
+
+### 2. Unreal Engine 5.5
+
+1. Скачать и установить **Epic Games Launcher** по ссылке выше.
+2. Войти под аккаунтом Epic.
+3. Слева выбрать вкладку **Unreal Engine**, сверху — **Library**.
+4. В разделе *Engine Versions* нажать жёлтый **`+`**.
+5. На появившемся слоте нажать **стрелочку вниз** рядом с номером версии и
+   выбрать **5.5.x** — по умолчанию предлагается более новая версия, она не
+   подойдёт.
+6. Нажать **Install**, затем в открывшемся окне — ссылку **Options**, и снять
+   галочки: *Starter Content*, *Templates and Feature Packs*, *Engine Source*, а
+   также все платформы кроме Windows.
+7. Установить.
+
+### 3. Проект
+
+```bash
+git clone https://01.tomorrow-school.ai/git/zutemiss/firing-range.git
+cd firing-range
+```
+
+Двойной клик по **`FiringRange.uproject`**. Редактор спросит, собрать ли
+недостающие модули — ответить **Yes**. Первая компиляция занимает 5–15 минут.
+
+### 4. Две карты
+
+Карт в репозитории нет: `.umap` — бинарный файл, а проект хранит только текст.
+Обе карты **пустые**, всё их содержимое строится кодом при запуске.
+
+**Вручную (четыре клика):**
+
+1. `File → New Level → Empty Level` → сохранить как `Content/Maps/MainMenu`
+2. Повторить, сохранить как `Content/Maps/FiringRange`
+
+**Или скриптом:** `Window → Output Log`, переключить консоль внизу в режим
+**Python** и выполнить:
+
+```python
+exec(open(r"<путь-к-проекту>/Scripts/GenerateMaps.py").read())
+```
+
+### 5. Запуск
+
+Нажать **Play**. Игра стартует в главном меню — так задано в
+`Config/DefaultEngine.ini`. Кнопка *Start Game* переходит на карту тира, где
+игровой режим строит весь полигон до того, как появится персонаж.
+
+В редакторе ничего назначать не нужно: ни одного Blueprint создавать не надо, ни
+одного класса в выпадающих списках выбирать не надо, ни одного актора на уровень
+перетаскивать не надо.
+
+---
+
+## Управление
+
+| Клавиша | Действие |
 |---|---|
-| Weapon and target meshes | Primitives from `/Engine/BasicShapes`, assembled and tinted in code |
-| Materials | Dynamic instances of the engine `BasicShapeMaterial` |
-| Input actions and mapping contexts | `UInputAction` and `UInputMappingContext` objects built with `NewObject` |
-| UMG menus | Slate widgets written in C++ |
-| HUD widgets | Canvas drawing in `AHUD::DrawHUD` |
-| Reload and recoil animations | Procedural transform animation of the weapon |
-| Level geometry, lighting, player start | `AFRRangeBuilder`, which spawns the whole range when the session starts |
+| `W` `A` `S` `D` | Движение |
+| Мышь | Обзор |
+| `Shift` | Бег |
+| `Ctrl` или `C` | Присесть |
+| `Space` | Прыжок |
+| **ЛКМ** | Огонь |
+| **ПКМ** | Прицеливание |
+| `R` | Перезарядка |
+| `1` `2` `3` | Пистолет, дробовик, снайперская винтовка |
+| Колесо мыши | Переключение оружия |
+| `T` | Запустить режим на время |
+| `Esc` | Пауза |
 
-The reason is practical rather than stylistic: a repository of plain text can be
-read, reviewed line by line, merged and diffed. A `.uasset` cannot. The trade
-off is that the range looks like blocks, and that trade is deliberate.
+Геймпад размечен на те же действия.
 
-The two `.umap` files are the only exception. They are the one thing the engine
-will not create from code at load time, and they are **empty** - see the setup
-step below.
-
----
-
-## Getting it running
-
-### Requirements
-
-- Unreal Engine 5.5
-- A C++ toolchain for your platform:
-  - **Windows** - Visual Studio 2022 with *Desktop development with C++* and the
-    *Game development with C++* workload
-  - **Linux** - clang, as installed by the engine's `Setup.sh`
-  - **macOS** - Xcode with the command line tools
-
-### Steps
-
-1. **Clone the repository.**
-
-   ```
-   git clone <repository-url> firing-range
-   cd firing-range
-   ```
-
-2. **Generate the project files and build.**
-
-   Right click `FiringRange.uproject` and choose *Generate Visual Studio project
-   files* on Windows, or run `GenerateProjectFiles` from your engine
-   installation on Linux and macOS. Then build the `FiringRangeEditor` target.
-
-   Opening `FiringRange.uproject` directly also works: the editor offers to
-   build the missing module and does it for you.
-
-3. **Create the two maps.** They are not in the repository because a `.umap` is
-   a binary asset. They are empty, so this takes four clicks:
-
-   - *File > New Level > Empty Level*, save as `Content/Maps/MainMenu`
-   - *File > New Level > Empty Level*, save as `Content/Maps/FiringRange`
-
-   Or let the editor do it: open *Window > Output Log*, switch the console at
-   the bottom to **Python**, and run
-
-   ```
-   exec(open(r"<project>/Scripts/GenerateMaps.py").read())
-   ```
-
-4. **Press Play.** The game boots into `MainMenu`, because
-   `Config/DefaultEngine.ini` names it as the default map and
-   `AFRMenuGameMode` as the default game mode. *Start Game* travels to the range
-   map, where `AFRRangeGameMode` builds the entire range before the player is
-   given a pawn.
-
-There is nothing to assign in the editor. No Blueprint has to be created, no
-class has to be picked in a dropdown, and no actor has to be dragged into a
-level.
+Патроны пополняются проходом по ящику. Ящик исчезает только если патроны
+действительно поместились — с полным резервом он останется на месте.
 
 ---
 
-## Controls
-
-| Input | Action |
-|---|---|
-| `W` `A` `S` `D` | Move |
-| Mouse | Look |
-| `Shift` | Sprint |
-| `Ctrl` or `C` | Crouch |
-| `Space` | Jump |
-| **Left mouse** | Fire |
-| **Right mouse** | Aim down sights |
-| `R` | Reload |
-| `1` `2` `3` | Pistol, shotgun, sniper rifle |
-| Mouse wheel | Cycle weapons |
-| `T` | Start a timed challenge |
-| `Esc` | Pause menu |
-
-A gamepad is mapped throughout, on the same actions.
-
-Walk over an ammunition crate to restock. A crate is only consumed when the
-rounds actually fit, so walking over one while full leaves it standing.
-
----
-
-## Repository structure
+## Структура проекта
 
 ```
 firing-range/
-├── FiringRange.uproject
-├── README.md
-├── firing-range__ts.md
-├── .gitignore
-├── .gitattributes
-├── Config/
-│   ├── DefaultEngine.ini
-│   ├── DefaultGame.ini
-│   ├── DefaultInput.ini
-│   └── DefaultEditor.ini
-├── Scripts/
-│   └── GenerateMaps.py
-├── resources/
-└── Source/
-    ├── FiringRange.Target.cs
-    ├── FiringRangeEditor.Target.cs
-    └── FiringRange/
-        ├── FiringRange.Build.cs
-        ├── FiringRange.h / .cpp
-        ├── Core/
-        ├── Player/
-        ├── Weapons/
-        ├── Targets/
-        ├── Pickups/
-        ├── Level/
-        └── UI/
+├── FiringRange.uproject          манифест проекта
+├── README.md                     этот файл
+├── README.en.md                  английская версия
+├── firing-range__ts.md           текст задания
+├── .gitignore  .gitattributes    правила git
+├── Config/                       конфигурация движка
+├── Scripts/                      вспомогательные скрипты
+├── resources/                    картинки из задания
+└── Source/                       исходный код
 ```
 
-### Every item, and why it is there
+### Корень
 
-#### Root
-
-| Item | What it is |
+| Файл | Описание |
 |---|---|
-| `FiringRange.uproject` | Project manifest. Names the engine version (5.5), the single runtime module, and the two plugins the project turns on: Enhanced Input, and the Python script plugin used only by the map generator. |
-| `README.md` | This file. |
-| `firing-range__ts.md` | The original assignment brief, kept under version control so the result can be checked against what was asked for. |
-| `.gitignore` | Keeps the generated half of an Unreal project out of the repository: `Binaries/`, `Intermediate/`, `Saved/`, `DerivedDataCache/`, IDE files. It also excludes `learn/`, which holds the authors' personal study notes and is not part of the deliverable. |
-| `.gitattributes` | Forces LF line endings inside the repository. Without it a file written on Windows arrives on Linux with stray carriage returns, which is the classic reason a project builds on one machine and not on another. |
+| `FiringRange.uproject` | Версия движка (5.5), список модулей, включённые плагины |
+| `README.md` / `README.en.md` | Документация на русском и английском |
+| `firing-range__ts.md` | Исходное задание, хранится в репозитории для сверки результата |
+| `.gitignore` | Исключает генерируемые папки Unreal (`Binaries`, `Intermediate`, `Saved`, `DerivedDataCache`) и личные заметки `learn/` |
+| `.gitattributes` | Переводы строк всегда LF — иначе проект собирается на Windows и падает на Linux |
 
-#### `Config/`
+### `Config/`
 
-| Item | What it is |
+| Файл | Описание |
 |---|---|
-| `DefaultEngine.ini` | Read by the engine before any of our code runs. Names the boot map and the default game mode and game instance, turns off motion blur and auto exposure because both interfere with aiming, sets gravity, and declares the custom collision channel bullets use. |
-| `DefaultGame.ini` | Project name, version, authors, and which maps get cooked into a packaged build. |
-| `DefaultInput.ini` | Switches the player input and input component classes over to Enhanced Input. Without these two lines every input binding in the project silently does nothing. It also turns off mouse smoothing and acceleration, so the sensitivity slider maps one to one onto view rotation. |
-| `DefaultEditor.ini` | Editor only conveniences: Play In Editor runs as a single standalone window, which is how the packaged game behaves. |
+| `DefaultEngine.ini` | Стартовая карта, классы по умолчанию, настройки рендера, гравитация, канал коллизий для пуль |
+| `DefaultGame.ini` | Название, версия, авторы, список карт для упаковки |
+| `DefaultInput.ini` | Переключает движок на Enhanced Input, отключает сглаживание мыши |
+| `DefaultEditor.ini` | Настройки Play In Editor |
 
-#### `Scripts/`
+### `Scripts/`
 
-| Item | What it is |
+| Файл | Описание |
 |---|---|
-| `GenerateMaps.py` | Editor script that creates the two empty maps and sets their game mode override. Optional - the same thing takes four clicks by hand. |
+| `GenerateMaps.py` | Создаёт две пустые карты из редактора. Необязателен — то же делается четырьмя кликами |
 
-#### `Source/` - build configuration
+### `Source/` — конфигурация сборки
 
-| Item | What it is |
+| Файл | Описание |
 |---|---|
-| `FiringRange.Target.cs` | Build rules for the packaged game. |
-| `FiringRangeEditor.Target.cs` | Build rules for the editor. |
-| `FiringRange.Build.cs` | Module dependencies, one per line with a comment saying why each is needed. |
-| `FiringRange.h` / `.cpp` | Module entry point and the `LogFiringRange` log category every subsystem writes to. |
+| `FiringRange.Target.cs` | Правила сборки игры |
+| `FiringRangeEditor.Target.cs` | Правила сборки редактора |
+| `FiringRange.Build.cs` | Зависимости модуля, каждая с комментарием зачем нужна |
+| `FiringRange.h` / `.cpp` | Точка входа модуля и категория логов `LogFiringRange` |
 
-#### `Source/FiringRange/Core/` - rules and shared data
+### `Source/FiringRange/Core/` — правила и общие данные
 
-| Item | What it is |
+| Файл | Описание |
 |---|---|
-| `FRTypes.h` | The vocabulary of the project: ammunition families, hit zones, movement patterns, difficulty levels, session states, and the `FFRRangeStats` scoreboard struct. Everything else speaks in these terms. |
-| `FRVisualUtils.h` / `.cpp` | Loads engine primitives and builds tinted dynamic materials. The single place that knows the project has no art. |
-| `FRSaveGame.h` / `.cpp` | Persistent settings and records on disk. |
-| `FRGameInstance.h` / `.cpp` | The only object that survives travelling between maps, so it owns the settings and the personal best. Broadcasts when a setting changes so listeners apply it immediately. |
-| `FRRangeGameState.h` / `.cpp` | The scoreboard. The game mode writes it, the HUD reads it, and neither talks to the other. |
-| `FRRangeGameMode.h` / `.cpp` | The rules: what a hit zone is worth, when a target respawns, what a restart does, and the timed challenge clock. Also builds the range during `InitGame`, before the player exists. |
-| `FRMenuGameMode.h` / `.cpp` | Game mode of the menu map. No weapons, no scoring, no HUD. |
-| `FRMenuPlayerController.h` / `.cpp` | Puts the main menu in the viewport and answers the two entries that leave it. |
+| `FRTypes.h` | Словарь проекта: типы патронов, зоны попадания, паттерны движения, сложность, структура табло |
+| `FRVisualUtils` | Загрузка примитивов движка и создание крашеных материалов |
+| `FRSaveGame` | Что хранится на диске: настройки и рекорд |
+| `FRGameInstance` | Единственный объект, переживающий смену уровня. Владеет настройками |
+| `FRRangeGameState` | Табло сессии: счёт, точность, серия, таймер |
+| `FRRangeGameMode` | Правила: стоимость зон, рестарт, сложность, режим на время. Строит тир |
+| `FRMenuGameMode` | Игровой режим карты меню |
+| `FRMenuPlayerController` | Показывает главное меню, переходит на карту тира |
 
-#### `Source/FiringRange/Player/`
+### `Source/FiringRange/Player/`
 
-| Item | What it is |
+| Файл | Описание |
 |---|---|
-| `FRCharacter.h` / `.cpp` | The player: movement, camera, the whole Enhanced Input setup built in code, the weapon loadout, aiming, and the ammunition reserve. |
-| `FRPlayerController.h` / `.cpp` | What outlives the pawn: input modes, camera pitch limits, the pause state machine and the challenge key. |
-| `FRHUD.h` / `.cpp` | Everything on screen during play, drawn on the canvas: the dynamic crosshair, score and accuracy, magazine and reserve, reload progress, hit markers and the challenge countdown. |
+| `FRCharacter` | Персонаж: движение, камера, Enhanced Input, инвентарь оружия, резерв патронов |
+| `FRPlayerController` | Режимы ввода, пределы наклона камеры, пауза, запуск челленджа |
+| `FRHUD` | Весь игровой интерфейс: прицел, счёт, точность, патроны, хит-маркеры, таймер |
 
-#### `Source/FiringRange/Weapons/`
+### `Source/FiringRange/Weapons/`
 
-| Item | What it is |
+| Файл | Описание |
 |---|---|
-| `FRWeaponBase.h` / `.cpp` | The weapon state machine: rate of fire, magazine, reload, spread, recoil, the ballistic aiming solution and the procedural view model animation. The three firearms share all of it. |
-| `FRPistol.h` / `.cpp` | Semi automatic sidearm. The reference the others are tuned against. |
-| `FRShotgun.h` / `.cpp` | Eight pellets per trigger pull and a shell by shell reload that firing can interrupt. |
-| `FRSniperRifle.h` / `.cpp` | Bolt action, a magnifying scope, and a reticle of its own on the HUD. |
-| `FRProjectile.h` / `.cpp` | The bullet: a swept sphere under `UProjectileMovementComponent`, pulled down by gravity, which reports to the game mode whether it scored. |
-| `FRImpactEffect.h` / `.cpp` | The flash and scorch mark at an impact, animated and destroyed in under half a second. |
+| `FRWeaponBase` | Конечный автомат оружия: темп, магазин, перезарядка, разброс, отдача, баллистика, анимация модели |
+| `FRPistol` | Полуавтоматический пистолет |
+| `FRShotgun` | Дробовик: 8 картечин за выстрел, перезарядка по одному патрону |
+| `FRSniperRifle` | Снайперская винтовка: затвор, оптика с увеличением |
+| `FRProjectile` | Пуля: физический снаряд с гравитацией, сообщает об исходе полёта |
+| `FRImpactEffect` | Вспышка и след от попадания |
 
-#### `Source/FiringRange/Targets/`
+### `Source/FiringRange/Targets/`
 
-| Item | What it is |
+| Файл | Описание |
 |---|---|
-| `FRTargetBase.h` / `.cpp` | Board, head and post, three scoring zones, the knockdown animation and the respawn timer. A pawn rather than an actor, because a controller can only possess a pawn. |
-| `FRStationaryTarget.h` / `.cpp` | The fixed boards of the static lanes. |
-| `FRMovingTarget.h` / `.cpp` | The body of a moving target: a pawn with a floating movement component and no decisions of its own. |
-| `FRTargetAIController.h` / `.cpp` | The brain: four movement patterns, from following a route to unpredictable strafing. |
-| `FRPatrolPath.h` / `.cpp` | A spline that defines where a moving target may go. |
+| `FRTargetBase` | Щит, голова, стойка, три зоны попадания, падение и респаун |
+| `FRStationaryTarget` | Неподвижные мишени статичных полос |
+| `FRMovingTarget` | Тело движущейся мишени |
+| `FRTargetAIController` | Мозг: четыре паттерна движения |
+| `FRPatrolPath` | Сплайн-маршрут патрулирования |
 
-#### `Source/FiringRange/Pickups/`
+### `Source/FiringRange/Pickups/`
 
-| Item | What it is |
+| Файл | Описание |
 |---|---|
-| `FRAmmoPickup.h` / `.cpp` | The ammunition crates: collected on overlap, only when the rounds fit, and back after a delay. |
+| `FRAmmoPickup` | Ящики с патронами: подбор при касании, возвращаются через время |
 
-#### `Source/FiringRange/Level/`
+### `Source/FiringRange/Level/`
 
-| Item | What it is |
+| Файл | Описание |
 |---|---|
-| `FRRangeBuilder.h` / `.cpp` | Builds the range: ground, berms, firing line and canopy, lane dividers, distance markers, both target sections, the crates, the lighting and the player start. |
+| `FRRangeBuilder` | Строит тир: земля, валы, навес, разделители, мишени, ящики, освещение, точка спауна |
 
-#### `Source/FiringRange/UI/`
+### `Source/FiringRange/UI/`
 
-| Item | What it is |
+| Файл | Описание |
 |---|---|
-| `FRUIStyle.h` / `.cpp` | Colours, fonts, brushes and the shared button and slider styles. Built from solid colour brushes and the engine's own Roboto, so no style asset is needed. |
-| `SFRMainMenu.h` / `.cpp` | The front end: start, settings, quit, and the personal best line. |
-| `SFRSettingsPanel.h` / `.cpp` | Mouse sensitivity, aim sensitivity, inverted look and difficulty. Used by both the main menu and the pause menu, which is why the two always agree. |
-| `SFRPauseMenu.h` / `.cpp` | Resume, settings, restart and return to the main menu, over a dimmed view of the frozen range. |
+| `FRUIStyle` | Цвета, шрифты, стили кнопок и ползунков |
+| `SFRMainMenu` | Главное меню: старт, настройки, выход, личный рекорд |
+| `SFRSettingsPanel` | Чувствительность мыши, инверсия, сложность. Общая для меню и паузы |
+| `SFRPauseMenu` | Продолжить, настройки, рестарт, выход в меню |
 
 ---
 
-## How the systems fit together
+## Особенность проекта
+
+**В репозитории нет ни одного бинарного файла.**
+
+Задание разрешает Blueprints или C++. Проект использует C++ целиком и идёт на шаг
+дальше: в нём нет вообще никакого авторского контента — ни мешей, ни текстур, ни
+материалов, ни звуков, ни анимаций, ни виджетов UMG, ни ассетов ввода, ни
+геометрии уровня.
+
+| Обычно это ассет | Здесь вместо него |
+|---|---|
+| Меши оружия и мишеней | Примитивы из `/Engine/BasicShapes`, собранные и покрашенные кодом |
+| Материалы | Динамические экземпляры движкового `BasicShapeMaterial` |
+| `InputAction`, `InputMappingContext` | Объекты, созданные через `NewObject` в рантайме |
+| Меню на UMG | Виджеты Slate на C++ |
+| Виджеты HUD | Рисование на Canvas в `AHUD::DrawHUD` |
+| Анимации перезарядки и отдачи | Процедурная анимация трансформа оружия |
+| Геометрия уровня, свет, PlayerStart | `AFRRangeBuilder`, строящий всё при старте сессии |
+
+Причина практическая, а не эстетическая: репозиторий из чистого текста можно
+прочитать, отревьюить построчно, слить ветки и посмотреть diff. С `.uasset` так
+нельзя. Расплата — тир выглядит как кубики, и этот размен сделан осознанно.
+
+Единственное исключение — два файла `.umap`. Это единственное, что движок не
+умеет создавать из кода при загрузке, и они **пустые**.
+
+---
+
+## Как это устроено
 
 ```
-             UFRGameInstance                  survives level travel
-             (settings, records)              ─────────────────────
+             UFRGameInstance                  переживает смену уровня
+             (настройки, рекорд)              ────────────────────────
                      │
         ┌────────────┴─────────────┐
         │                          │
   AFRMenuGameMode           AFRRangeGameMode ─── AFRRangeBuilder
-  (MainMenu map)            (FiringRange map)    (builds everything)
+  (карта MainMenu)          (карта FiringRange)  (строит тир)
         │                          │
   AFRMenuPlayerController    AFRRangeGameState ──────────► AFRHUD
-  → SFRMainMenu              (the scoreboard)              (reads only)
+  → SFRMainMenu              (табло)                       (только читает)
       → SFRSettingsPanel            ▲
-                                    │ writes
+                                    │ пишет
                           ┌─────────┴──────────┐
                           │                    │
                   AFRWeaponBase          AFRTargetBase
-                  (shots fired)          (hits, zones)
+                  (выстрелы)             (попадания, зоны)
                           │                    ▲
                     AFRProjectile ─────────────┘
-                    (damage, outcome)
+                    (урон, исход полёта)
 ```
 
-One trigger pull travels through the project like this:
+Один выстрел проходит через проект так:
 
-1. `AFRCharacter` receives the fire action and calls `StartFire` on the weapon.
-2. `AFRWeaponBase` checks the rate of fire and the magazine, spends a round,
-   traces forward from the camera to find the point the crosshair covers, and
-   launches one projectile per pellet towards it - aimed slightly high, by
-   exactly the distance the bullet will fall on the way.
-3. It announces how many projectiles left the muzzle. The game mode adds them to
-   the denominator of the accuracy figure.
-4. `AFRProjectile` flies, and on impact applies point damage through the engine
-   damage pipeline.
-5. `AFRTargetBase::TakeDamage` works out which zone was struck, announces the
-   hit, falls over and schedules its own return.
-6. `AFRRangeGameMode` turns the zone and the range into points and writes them to
+1. `AFRCharacter` получает действие огня и вызывает `StartFire` у оружия.
+2. `AFRWeaponBase` проверяет темп и магазин, тратит патрон, трассирует луч из
+   камеры вперёд — чтобы узнать, что накрывает прицел, — и выпускает снаряды в
+   эту точку, целясь чуть выше ровно на ту величину, на которую пуля упадёт по
+   дороге.
+3. Оружие сообщает, сколько снарядов покинуло ствол. Игровой режим добавляет их в
+   знаменатель точности.
+4. `AFRProjectile` летит и при попадании наносит урон через штатный конвейер
+   повреждений движка.
+5. `AFRTargetBase::TakeDamage` определяет задетую зону, сообщает о попадании,
+   падает и сам планирует своё возвращение.
+6. `AFRRangeGameMode` превращает зону и дистанцию в очки и пишет их в
    `AFRRangeGameState`.
-7. `AFRHUD` was listening to the game state, and draws a hit marker.
+7. `AFRHUD`, подписанный на табло, рисует хит-маркер.
 
-At no point does the bullet know what a target is, the target know what a score
-is, or the HUD know what a weapon is.
+Ни в один момент пуля не знает, что такое мишень, мишень не знает, что такое
+очки, а HUD не знает, что такое оружие.
 
----
+### Решения, о которых стоит знать
 
-## Design decisions worth knowing about
+**Честный прицел и настоящая баллистика одновременно.** Задание требует и прицел,
+точно показывающий точку попадания, и пули, подчиняющиеся физике. Это
+противоречие: пуля с гравитацией падает ниже точки прицела.
+`AFRWeaponBase::ComputeLaunchVelocity` его разрешает — считает время полёта по
+дистанции и скорости, считает просадку за это время и наводит ствол ровно на эту
+величину выше. Пуля летит по дуге и всё равно приходит в точку прицела.
 
-**A truthful crosshair and real ballistics at the same time.** The brief asks
-for a crosshair that marks the exact point of impact *and* for bullets that obey
-physics. Those pull in opposite directions, because a bullet with gravity falls
-below where it was pointed. `AFRWeaponBase::ComputeLaunchVelocity` resolves it:
-it works out the flight time from the distance and the muzzle speed, works out
-the drop over that time, and aims the muzzle that far above the crosshair. The
-bullet arcs, and it still lands on the dot.
+**Прицел раскрывается, когда оружие менее точно.** Зазор между штрихами — это
+конус разброса, спроецированный в пиксели. Он расширяется при беге и сужается при
+прицеливании. Прицел постоянного размера врал бы.
 
-**The crosshair opens when the weapon is less accurate.** Its gap is the current
-spread cone projected into pixels, so it widens while running and closes while
-aiming. A crosshair that stayed the same size would be lying.
+**Отдача пишется в поворот контроллера в градусах**, а не подаётся через
+`AddControllerPitchInput`. Ввод проходит через настройку чувствительности мыши, и
+иначе игрок с высокой чувствительностью получил бы совсем другое оружие.
 
-**Recoil is written into the control rotation in degrees**, not fed through
-`AddControllerPitchInput`. Input goes through the mouse sensitivity setting, so
-a player on high sensitivity would otherwise get a completely different weapon.
+**У пуль свой канал коллизий.** Дробовик выпускает восемь картечин из одной точки
+в один кадр. В общем канале они блокировали бы друг друга прямо на спауне.
 
-**Bullets have their own collision channel.** A shotgun releases eight pellets
-from the same muzzle point on the same frame. On any shared channel they would
-block each other at spawn. The `Projectile` channel declared in
-`DefaultEngine.ini` lets bullets ignore bullets and nothing else.
+**Мишени — это пешки.** Только в пешку может вселиться `AAIController`, а
+движущимся мишеням он нужен.
 
-**Targets are pawns.** Only a pawn can be possessed by an `AAIController`, and
-the moving targets need one.
+**ИИ мишеней не использует навигацию.** Навигационный меш — это данные,
+запечённые в ассет уровня, а у проекта нет ассета уровня, куда их печь.
+Аналитическое следование по сплайну не требует данных и даёт точное, повторяемое
+движение — что тренировочному тиру и нужно.
 
-**The target AI never queries navigation.** A navigation mesh is data baked into
-a level asset, and this project has no level asset to bake it into. The
-controller follows its spline analytically instead, which needs no navigation
-data and gives exact, repeatable motion - which is what a training range wants
-anyway.
+**О промахе сообщает пуля, а не курок.** В момент выстрела неизвестно, промах это
+или нет: пуля ещё летит. `AFRProjectile` сам докладывает об исходе, в том числе
+когда просто истекает время полёта.
 
-**A miss is reported by the bullet, not by the trigger.** Whether a shot missed
-is unknowable at the moment it is fired, because the bullet is still travelling.
-`AFRProjectile` reports its own outcome when it resolves, including when it
-simply runs out of flight time.
-
-**The range is outdoors.** A sun, a sky atmosphere and a real time capture sky
-light give correct lighting with no imported content. An indoor room would have
-needed light fixtures and a captured cubemap.
-
-**Cross platform from the start.** LF line endings enforced by
-`.gitattributes`, fully qualified include paths so case sensitive file systems
-are happy, `UKismetSystemLibrary::QuitGame` instead of a platform call, and no
-absolute paths anywhere.
+**Тир открытый.** Солнце, атмосфера и sky light в режиме реального захвата дают
+корректное освещение без единого импортированного файла.
 
 ---
 
-## Assignment checklist
+## Соответствие заданию
 
-| Requirement | Where it lives |
+| Требование | Где реализовано |
 |---|---|
-| Main menu on a separate map | `MainMenu` map, `AFRMenuGameMode`, `SFRMainMenu` |
-| Start Game button | `SFRMainMenu` → `AFRMenuPlayerController::HandleStartGame` |
-| Settings with mouse sensitivity | `SFRSettingsPanel`, persisted by `UFRGameInstance` |
-| Quit button | `AFRMenuPlayerController::HandleQuitGame` |
-| Accurate crosshair | `AFRHUD::DrawCrosshair` with `AFRWeaponBase::ComputeLaunchVelocity` |
-| Accuracy readout | `FFRRangeStats::GetAccuracy`, drawn by `AFRHUD::DrawScorePanel` |
-| Ammunition and reload status | `AFRHUD::DrawWeaponPanel` |
-| Player movement | `AFRCharacter`, Enhanced Input |
-| Aim, shoot, reload input | `AFRCharacter::BuildInputActions` |
-| Ammo pickups | `AFRAmmoPickup` |
-| Recoil | `AFRWeaponBase::ApplyRecoil` and `UpdateRecoil` |
-| Reload animation | `AFRWeaponBase::UpdateViewModel`, procedural |
-| Projectile physics | `AFRProjectile` |
-| Hit detection with feedback | `AFRProjectile::HandleHit`, `AFRImpactEffect` |
-| Stationary target | `AFRStationaryTarget` |
-| Moving target with AI | `AFRMovingTarget` and `AFRTargetAIController` |
-| Target hit detection | `AFRTargetBase::TakeDamage` and `ResolveHitZone` |
-| Targets respawn on a timer | `AFRTargetBase::HandleKnockedDown` |
-| Coherent theme and lighting | `AFRRangeBuilder::BuildLighting` and the palette above it |
-| Stationary section | `AFRRangeBuilder::BuildStationarySection` |
-| Moving section | `AFRRangeBuilder::BuildMovingSection` |
-| Starts with a loaded weapon | `AFRWeaponBase::BeginPlay` |
-| Pause menu | `AFRPlayerController::OpenPauseMenu`, `SFRPauseMenu` |
-| Restart from the pause menu | `AFRRangeGameMode::RestartRange` |
-| Return to the main menu | `AFRPlayerController::HandleQuitToMainMenu` |
-| **Bonus** - several weapons | `AFRPistol`, `AFRShotgun`, `AFRSniperRifle` |
-| **Bonus** - advanced target AI | `EFRTargetMotion`, four patterns, three difficulty levels |
-| **Bonus** - hit zones and headshots | `AFRTargetBase::ResolveHitZone`, scored in `AFRRangeGameMode` |
-| **Bonus** - timed challenge | `AFRRangeGameMode::StartTimedChallenge`, key `T` |
+| Меню на отдельной карте | Карта `MainMenu`, `AFRMenuGameMode`, `SFRMainMenu` |
+| Кнопка Start Game | `SFRMainMenu` → `AFRMenuPlayerController::HandleStartGame` |
+| Настройка чувствительности мыши | `SFRSettingsPanel`, сохраняется в `UFRGameInstance` |
+| Кнопка выхода | `AFRMenuPlayerController::HandleQuitGame` |
+| Точный прицел | `AFRHUD::DrawCrosshair` + `AFRWeaponBase::ComputeLaunchVelocity` |
+| Отображение точности | `FFRRangeStats::GetAccuracy`, рисуется в `AFRHUD::DrawScorePanel` |
+| Патроны и статус перезарядки | `AFRHUD::DrawWeaponPanel` |
+| Движение персонажа | `AFRCharacter`, Enhanced Input |
+| Обработка прицеливания, огня, перезарядки | `AFRCharacter::BuildInputActions` |
+| Подбор патронов | `AFRAmmoPickup` |
+| Отдача | `AFRWeaponBase::ApplyRecoil` и `UpdateRecoil` |
+| Анимация перезарядки | `AFRWeaponBase::UpdateViewModel`, процедурная |
+| Физика снарядов | `AFRProjectile` |
+| Детект попаданий с обратной связью | `AFRProjectile::HandleHit`, `AFRImpactEffect` |
+| Статичная мишень | `AFRStationaryTarget` |
+| Движущаяся мишень с ИИ | `AFRMovingTarget` + `AFRTargetAIController` |
+| Детект попаданий по мишеням | `AFRTargetBase::TakeDamage`, `ResolveHitZone` |
+| Респаун мишеней по таймеру | `AFRTargetBase::HandleKnockedDown` |
+| Цельная тема и освещение | `AFRRangeBuilder::BuildLighting` и палитра рядом |
+| Секция статичных мишеней | `AFRRangeBuilder::BuildStationarySection` |
+| Секция движущихся мишеней | `AFRRangeBuilder::BuildMovingSection` |
+| Старт с заряженным оружием | `AFRWeaponBase::BeginPlay` |
+| Меню паузы | `AFRPlayerController::OpenPauseMenu`, `SFRPauseMenu` |
+| Рестарт из паузы | `AFRRangeGameMode::RestartRange` |
+| Возврат в главное меню | `AFRPlayerController::HandleQuitToMainMenu` |
+| **Бонус** — несколько стволов | `AFRPistol`, `AFRShotgun`, `AFRSniperRifle` |
+| **Бонус** — продвинутый ИИ мишеней | `EFRTargetMotion`, четыре паттерна, три уровня сложности |
+| **Бонус** — зоны попадания и хедшоты | `AFRTargetBase::ResolveHitZone`, очки в `AFRRangeGameMode` |
+| **Бонус** — режим на время | `AFRRangeGameMode::StartTimedChallenge`, клавиша `T` |
