@@ -497,7 +497,11 @@ void AFRCharacter::SpawnLoadout()
 
 AFRWeaponBase* AFRCharacter::GetActiveWeapon() const
 {
-	return Weapons.IsValidIndex(ActiveWeaponIndex) ? Weapons[ActiveWeaponIndex] : nullptr;
+	// Get() rather than letting the conditional operator convert the TObjectPtr:
+	// the two branches would otherwise have to agree on a common type, and the
+	// deduction between a wrapper and a null pointer literal is not worth relying
+	// on when one call makes the intent explicit.
+	return Weapons.IsValidIndex(ActiveWeaponIndex) ? Weapons[ActiveWeaponIndex].Get() : nullptr;
 }
 
 void AFRCharacter::EquipWeaponAtIndex(int32 Index)
