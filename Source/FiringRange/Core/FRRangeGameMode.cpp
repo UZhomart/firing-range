@@ -285,19 +285,40 @@ void AFRRangeGameMode::HandleShotsFired(int32 ProjectileCount)
 	{
 		RangeState->RegisterShots(ProjectileCount);
 	}
+
+	// Opened here and closed in NotifyProjectileResolved, once every projectile
+	// of this pull has landed.
+	FFRPendingShot Shot;
+	Shot.ProjectilesInFlight = FMath::Max(1, ProjectileCount);
+	PendingShots.Add(Shot);
 }
 
 void AFRRangeGameMode::NotifyProjectileResolved(bool bScored)
 {
-	if (bScored)
+	if (PendingShots.Num() == 0)
 	{
-		// A scoring projectile was already accounted for by the target it struck.
 		return;
 	}
 
+	// Projectiles resolve in roughly the order they were fired, so the oldest
+	// open shot is the one this bullet belongs to. Being off by one shot during
+	// rapid fire costs nothing: the counter it feeds is a streak, not a score.
+	FFRPendingShot& Shot = PendingShots[0];
+
+	Shot.bScored |= bScored;
+	--Shot.ProjectilesInFlight;
+
+	if (Shot.ProjectilesInFlight > 0)
+	{
+		return;
+	}
+
+	const bool bShotConnected = Shot.bScored;
+	PendingShots.RemoveAt(0);
+
 	if (AFRRangeGameState* RangeState = GetRangeGameState())
 	{
-		RangeState->RegisterMiss();
+		RangeState->RegisterShotOutcome(bShotConnected);
 	}
 }
 
@@ -316,6 +337,9 @@ void AFRRangeGameMode::RestartRange()
 		RangeState->ResetStats();
 		RangeState->SetSessionState(EFRSessionState::FreePractice);
 	}
+
+	// Bullets fired before the restart belong to the session that just ended.
+	PendingShots.Reset();
 
 	for (AFRTargetBase* Target : RegisteredTargets)
 	{

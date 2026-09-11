@@ -47,13 +47,17 @@ public:
 	void RegisterHit(EFRHitZone Zone, float DistanceMetres, int32 Points);
 
 	/**
-	 * Counts one projectile that finished its flight without scoring.
+	 * Closes one trigger pull once every projectile it released has resolved.
 	 *
-	 * A miss cannot be detected when the trigger is pulled, because the bullet is
-	 * still travelling. It is reported by the projectile itself once it resolves,
-	 * which is the only moment the outcome is actually known.
+	 * The streak is counted per shot rather than per projectile. A shotgun blast
+	 * is eight projectiles of which at most one can knock a target down, so a
+	 * per projectile streak would be broken by the player's own buckshot on every
+	 * successful shot.
+	 *
+	 * The outcome is only known once the bullets land, which is why this is
+	 * reported after the fact rather than when the trigger is pulled.
 	 */
-	void RegisterMiss();
+	void RegisterShotOutcome(bool bScored);
 
 	/** Counts a target that was knocked down. */
 	void RegisterTargetDown();

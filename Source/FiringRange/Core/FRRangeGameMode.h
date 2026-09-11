@@ -115,6 +115,26 @@ protected:
 	/** Convenience accessor for the typed game state. */
 	AFRRangeGameState* GetRangeGameState() const;
 
+	/**
+	 * One trigger pull, waiting for its projectiles to land.
+	 *
+	 * A shot is only finished once every projectile it released has resolved, and
+	 * it counts as a hit if any single one of them scored. Tracking that is what
+	 * lets the streak mean "shots that connected" rather than "projectiles that
+	 * connected", which for a shotgun are very different numbers.
+	 */
+	struct FFRPendingShot
+	{
+		/** Projectiles of this shot that have not resolved yet. */
+		int32 ProjectilesInFlight = 0;
+
+		/** True as soon as any projectile of this shot scored. */
+		bool bScored = false;
+	};
+
+	/** Shots in flight, oldest first. */
+	TArray<FFRPendingShot> PendingShots;
+
 	/** Builder that created the range, whether it was placed or generated. */
 	UPROPERTY(Transient)
 	TObjectPtr<AFRRangeBuilder> RangeBuilder;

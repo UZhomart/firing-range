@@ -28,10 +28,10 @@ void AFRRangeGameState::RegisterHit(EFRHitZone Zone, float DistanceMetres, int32
 		return;
 	}
 
+	// The streak is not touched here. It belongs to the trigger pull as a whole
+	// and is settled by RegisterShotOutcome once every projectile has landed.
 	++Stats.ShotsHit;
 	Stats.Score += Points;
-	++Stats.CurrentStreak;
-	Stats.BestStreak = FMath::Max(Stats.BestStreak, Stats.CurrentStreak);
 
 	if (Zone == EFRHitZone::Head)
 	{
@@ -42,11 +42,20 @@ void AFRRangeGameState::RegisterHit(EFRHitZone Zone, float DistanceMetres, int32
 	OnStatsChanged.Broadcast();
 }
 
-void AFRRangeGameState::RegisterMiss()
+void AFRRangeGameState::RegisterShotOutcome(bool bScored)
 {
-	// The accuracy figure already accounts for this projectile, because it was
-	// counted when it was fired. Only the streak reacts to a miss.
-	Stats.CurrentStreak = 0;
+	// Accuracy is untouched here: every projectile of this shot was already
+	// counted when it left the muzzle, and the ones that connected were counted
+	// by RegisterHit. Only the streak is decided at this point.
+	if (bScored)
+	{
+		++Stats.CurrentStreak;
+		Stats.BestStreak = FMath::Max(Stats.BestStreak, Stats.CurrentStreak);
+	}
+	else
+	{
+		Stats.CurrentStreak = 0;
+	}
 
 	OnStatsChanged.Broadcast();
 }
