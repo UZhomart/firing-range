@@ -6,12 +6,20 @@
 > together, and the code is commented with that goal in mind rather than for
 > brevity.
 
-**Authors:** zutemiss and dshadykh
 **Engine:** Unreal Engine 5.5
 **Language:** C++ only, no Blueprints
 **Platforms:** Windows, Linux, macOS
 
 *[Русская версия](README.md)*
+
+### Authors
+
+| Author | Area of responsibility |
+|---|---|
+| **zutemiss** | Project skeleton and engine configuration, core types and persistence, character and input, the whole weapon system, ballistics and projectile physics, ammunition crates, session rules and accuracy accounting |
+| **dshadykh** | Targets and hit zones, moving target AI and patrol routes, the HUD, every Slate menu, the procedural range builder, documentation |
+
+The split is visible in the history: `git shortlog -sne` and `git log --author=...`.
 
 A first person marksmanship range: a weapon system with three firearms, physics
 driven bullets, stationary and AI driven moving targets, ammunition pickups, a
