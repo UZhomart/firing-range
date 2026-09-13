@@ -74,6 +74,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Scoring")
 	TMap<EFRHitZone, int32> ZoneScores;
 
+	/** Length of one timed run, in seconds. */
+	UPROPERTY(EditDefaultsOnly, Category = "Firing Range|Challenge", meta = (ClampMin = "5.0"))
+	float ChallengeDuration = 60.0f;
+
 	/**
 	 * Extra points per metre of range.
 	 *
