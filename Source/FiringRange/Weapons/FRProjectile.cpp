@@ -152,7 +152,10 @@ void AFRProjectile::HandleHit(
 
 	ReportOutcome(bScored);
 
-	const FVector ImpactNormal = Hit.ImpactNormal.IsNearlyZero() ? -ShotDirection : Hit.ImpactNormal;
+	// FHitResult stores its normals as FVector_NetQuantizeNormal, a compressed
+	// network type. Both branches of the conditional must agree on one type, so
+	// the stored normal is converted back to a plain vector explicitly.
+	const FVector ImpactNormal = Hit.ImpactNormal.IsNearlyZero() ? -ShotDirection : FVector(Hit.ImpactNormal);
 	AFRImpactEffect::PlayImpactFeedback(this, Hit.ImpactPoint, ImpactNormal, TracerColor, ImpactSound);
 
 	Destroy();
