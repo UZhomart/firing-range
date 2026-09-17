@@ -31,11 +31,12 @@ main menu on its own map, a pause menu and a timed challenge mode.
 1. [Ready-made build](#ready-made-build) — download and play without installing the engine
 2. [What to download](#what-to-download) — to work with the source code
 3. [Installation](#installation)
-4. [Controls](#controls)
-5. [Repository structure](#repository-structure)
-6. [What makes this project unusual](#what-makes-this-project-unusual)
-7. [How it works](#how-it-works)
-8. [Assignment checklist](#assignment-checklist)
+4. [Other platforms](#other-platforms) — macOS and Linux
+5. [Controls](#controls)
+6. [Repository structure](#repository-structure)
+7. [What makes this project unusual](#what-makes-this-project-unusual)
+8. [How it works](#how-it-works)
+9. [Assignment checklist](#assignment-checklist)
 
 ---
 
@@ -51,6 +52,9 @@ which files of that size need, is disabled on Gitea.
 | **Direct link** | https://github.com/UZhomart/firing-range/raw/main/Release/FiringRange-Win64.zip |
 | **Size** | 260 MB zipped, 380 MB extracted |
 | **Configuration** | Shipping, Windows 64-bit |
+
+> The build is Windows only. For macOS and Linux, see
+> [Other platforms](#other-platforms).
 
 ### How to run it
 
@@ -216,6 +220,66 @@ level.
 With integrated graphics or 8 GB of memory, lower the quality in the editor:
 the **⚙ Settings** button in the top right → **Engine Scalability Settings** →
 **Low**. For option A, append `-ExecCmds="scalability 0"` to the command.
+
+---
+
+## Other platforms
+
+The ready-made build above is **Windows only**. It will not run on macOS or
+Linux.
+
+### macOS
+
+A separate Mac build can only be made on a Mac: Unreal cannot build a game for
+macOS from Windows, because that needs Xcode. On top of that, an unsigned
+application on macOS has to be opened with right click → **Open**.
+
+What the Mac needs:
+
+- **Xcode** from the App Store
+- **Unreal Engine 5.5** for macOS — through the Epic Games Launcher, the same way
+  as in [Installation](#2-unreal-engine-55)
+
+**Run the project without packaging** — the same as option A on Windows:
+
+```bash
+cd firing-range
+"/Users/Shared/Epic Games/UE_5.5/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor" \
+  "$PWD/FiringRange.uproject" -game -windowed -ResX=1280 -ResY=720
+```
+
+On the first launch the engine builds the project's C++ module for macOS, which
+takes a few minutes.
+
+**Build the `.app` application:**
+
+```bash
+"/Users/Shared/Epic Games/UE_5.5/Engine/Build/BatchFiles/RunUAT.sh" BuildCookRun \
+  -project="$PWD/FiringRange.uproject" -noP4 -platform=Mac -clientconfig=Shipping \
+  -build -cook -stage -pak -compressed -archive -archivedirectory="$PWD/Packaged"
+```
+
+The application appears in `Packaged/Mac/FiringRange.app`. If macOS says the
+application is damaged or cannot be verified, remove its quarantine attribute:
+
+```bash
+xattr -cr Packaged/Mac/FiringRange.app
+```
+
+> The code was written to be cross platform, but the project has not been built
+> on macOS yet. clang is stricter than the Visual Studio compiler, so the first
+> build may need small fixes.
+
+### Linux
+
+A Linux build can be made directly on Windows. It needs Epic's cross-compile
+toolchain — clang for Linux, in the version listed in the UE 5.5 requirements.
+Once it is installed, `-platform=Win64` in the packaging command becomes
+`-platform=Linux`.
+
+**A Linux build will not run on a Mac.** macOS is not Linux: they use different
+executable formats (Mach-O and ELF), different system libraries and different
+graphics APIs (Metal and Vulkan). A Mac needs its own build — see above.
 
 ---
 
