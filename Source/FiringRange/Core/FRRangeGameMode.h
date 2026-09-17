@@ -39,9 +39,11 @@ public:
 	 * Reports the outcome of a projectile that finished its flight.
 	 *
 	 * Called by the bullet itself, because the moment it resolves is the only
-	 * moment anyone knows whether it scored.
+	 * moment its shot can be closed. Whether the shot scored is not part of the
+	 * report: that is decided by the targets, which announce every scoring hit
+	 * themselves. The bullet only says that it is done.
 	 */
-	void NotifyProjectileResolved(bool bScored);
+	void NotifyProjectileResolved();
 
 	/** Adds a target to the session after it was spawned by the range builder. */
 	void RegisterTarget(AFRTargetBase* Target);

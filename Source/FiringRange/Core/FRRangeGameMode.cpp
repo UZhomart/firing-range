@@ -234,6 +234,16 @@ void AFRRangeGameMode::HandleTargetHit(AFRTargetBase* Target, EFRHitZone Zone, f
 
 	RangeState->RegisterHit(Zone, DistanceMetres, Points);
 	RangeState->RegisterTargetDown();
+
+	// The target is the only reliable witness of a scoring hit. The damage the
+	// bullet dealt says nothing on its own: every actor accepts damage by
+	// default, so a bullet buried in a berm reports damage just like one in a
+	// bullseye. The hit is announced while the bullet is still resolving, so the
+	// shot it belongs to is still the oldest open one.
+	if (PendingShots.Num() > 0)
+	{
+		PendingShots[0].bScored = true;
+	}
 }
 
 // -- Player ------------------------------------------------------------------
@@ -293,7 +303,7 @@ void AFRRangeGameMode::HandleShotsFired(int32 ProjectileCount)
 	PendingShots.Add(Shot);
 }
 
-void AFRRangeGameMode::NotifyProjectileResolved(bool bScored)
+void AFRRangeGameMode::NotifyProjectileResolved()
 {
 	if (PendingShots.Num() == 0)
 	{
@@ -305,7 +315,6 @@ void AFRRangeGameMode::NotifyProjectileResolved(bool bScored)
 	// rapid fire costs nothing: the counter it feeds is a streak, not a score.
 	FFRPendingShot& Shot = PendingShots[0];
 
-	Shot.bScored |= bScored;
 	--Shot.ProjectilesInFlight;
 
 	if (Shot.ProjectilesInFlight > 0)

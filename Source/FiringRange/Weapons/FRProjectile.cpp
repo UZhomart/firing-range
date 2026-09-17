@@ -84,7 +84,7 @@ void AFRProjectile::BeginPlay()
 	TracerMesh->SetRelativeScale3D(FVector(BulletRadius * 2.0f / 100.0f, BulletRadius * 2.0f / 100.0f, TracerLength / 100.0f));
 }
 
-void AFRProjectile::ReportOutcome(bool bScored)
+void AFRProjectile::ReportOutcome()
 {
 	if (bOutcomeReported)
 	{
@@ -97,19 +97,19 @@ void AFRProjectile::ReportOutcome(bool bScored)
 	{
 		if (AFRRangeGameMode* GameMode = World->GetAuthGameMode<AFRRangeGameMode>())
 		{
-			GameMode->NotifyProjectileResolved(bScored);
+			GameMode->NotifyProjectileResolved();
 		}
 	}
 }
 
 void AFRProjectile::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	// A bullet that simply ran out of flight time never called HandleHit, and it
-	// is still a miss. Only a genuine destruction counts: a level change must not
-	// register misses for everything that happened to be in the air.
+	// A bullet that simply ran out of flight time never called HandleHit, and its
+	// shot still has to be closed. Only a genuine destruction counts: a level
+	// change must not resolve shots for everything that happened to be in the air.
 	if (EndPlayReason == EEndPlayReason::Destroyed)
 	{
-		ReportOutcome(false);
+		ReportOutcome();
 	}
 
 	Super::EndPlay(EndPlayReason);
@@ -133,12 +133,13 @@ void AFRProjectile::HandleHit(
 	// call. That keeps the bullet unaware of what a target is: anything that
 	// overrides TakeDamage can react to being shot, and the target decides for
 	// itself which of its zones was struck.
-	bool bScored = false;
+	//
+	// The damage the call returns is deliberately ignored. Every actor accepts
+	// damage by default, so a wall reports a hit just as a bullseye does. Whether
+	// the shot scored is announced by the target itself, not inferred here.
 	if (OtherActor && OtherActor != this)
 	{
-		// A target returns the damage it accepted and zero for a non scoring part
-		// such as its post, so the return value doubles as the scoring answer.
-		const float AppliedDamage = UGameplayStatics::ApplyPointDamage(
+		UGameplayStatics::ApplyPointDamage(
 			OtherActor,
 			Damage,
 			ShotDirection,
@@ -146,11 +147,9 @@ void AFRProjectile::HandleHit(
 			GetInstigatorController(),
 			this,
 			UDamageType::StaticClass());
-
-		bScored = AppliedDamage > 0.0f;
 	}
 
-	ReportOutcome(bScored);
+	ReportOutcome();
 
 	// FHitResult stores its normals as FVector_NetQuantizeNormal, a compressed
 	// network type. Both branches of the conditional must agree on one type, so

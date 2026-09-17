@@ -80,13 +80,12 @@ protected:
 	float MaxFlightTime = 5.0f;
 
 	/**
-	 * Tells the game mode how this bullet ended.
+	 * Tells the game mode that this bullet is done.
 	 *
 	 * Reported exactly once, whether the bullet struck something or simply ran
-	 * out of flight time, because the accuracy figure counts every projectile
-	 * that left the muzzle.
+	 * out of flight time, so the shot it belongs to can be closed.
 	 */
-	void ReportOutcome(bool bScored);
+	void ReportOutcome();
 
 	UFUNCTION()
 	void HandleHit(
