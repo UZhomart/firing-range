@@ -48,6 +48,8 @@ Builds/
 Packaged/
 *.zip
 !resources/*.zip
+# The packaged game archive is the one zip that belongs in the repository.
+!Release/*.zip
 
 # ---------------------------------------------------------------
 # OS noise
