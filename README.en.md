@@ -113,6 +113,10 @@ build artefacts.
    Opening `FiringRange.uproject` directly also works: the editor offers to
    build the missing module and does it for you.
 
+   If Windows asks *"How do you want to open this file?"*, close that dialog
+   without choosing anything: `.uproject` files are not associated with Unreal
+   on that machine. Open the project with the command from step 4 instead.
+
 3. **The two maps are already in the repository** under `Content/Maps/`. Both
    are empty and each already points at its game mode, so there is nothing to
    do. If they ever go missing, let the editor recreate them:
@@ -128,11 +132,35 @@ build artefacts.
    exec(open(r"<project>/Scripts/GenerateMaps.py").read())
    ```
 
-4. **Press Play.** The game boots into `MainMenu`, because
+4. **Start the game.** There are two ways. Both commands are for PowerShell and
+   an engine installed in the default location; replace the project path with
+   your own.
+
+   **A. Straight into the game, without the editor.** The game opens in its own
+   window and starts at the main menu:
+
+   ```powershell
+   & "C:\Program Files\Epic Games\UE_5.5\Engine\Binaries\Win64\UnrealEditor.exe" "<project>\FiringRange.uproject" -game -windowed -ResX=1280 -ResY=720
+   ```
+
+   `-game` runs the project as a game, and `-windowed -ResX -ResY` set a
+   1280x720 window. On a weak machine, append `-ExecCmds="scalability 0"`.
+
+   **B. Through the editor.** Open the project:
+
+   ```powershell
+   & "C:\Program Files\Epic Games\UE_5.5\Engine\Binaries\Win64\UnrealEditor.exe" "<project>\FiringRange.uproject"
+   ```
+
+   wait for the editor window (the first launch compiles shaders, which can take
+   a while), then press the green **Play** button in the toolbar, or `Alt+P`.
+   `Esc` followed by **Stop** ends the session.
+
+   Either way, the game boots into `MainMenu`, because
    `Config/DefaultEngine.ini` names it as the default map and
    `AFRMenuGameMode` as the default game mode. *Start Game* travels to the range
    map, where `AFRRangeGameMode` builds the entire range before the player is
-   given a pawn.
+   given a pawn. `Esc` → **Main Menu** → **Quit** closes the game.
 
 There is nothing to assign in the editor. No Blueprint has to be created, no
 class has to be picked in a dropdown, and no actor has to be dragged into a
