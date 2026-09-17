@@ -1,10 +1,9 @@
 # Firing Range
 
-> **This is an educational project.** It was written as a learning exercise for the
-> Firing Range assignment and is not a commercial product. Everything in this
-> repository exists to demonstrate how the systems of a first person shooter fit
-> together, and the code is commented with that goal in mind rather than for
-> brevity.
+> **This is an educational project.** It was written as a learning exercise for
+> the Firing Range assignment and is not a commercial product. The code is
+> written and commented so that it shows how the systems of a first person
+> shooter fit together, rather than for brevity.
 
 **Engine:** Unreal Engine 5.5
 **Language:** C++ only, no Blueprints
@@ -21,150 +20,202 @@
 
 The split is visible in the history: `git shortlog -sne` and `git log --author=...`.
 
-A first person marksmanship range: a weapon system with three firearms, physics
-driven bullets, stationary and AI driven moving targets, ammunition pickups, a
-head up display that reports accuracy, a main menu on its own map, a pause menu
-and a timed challenge mode.
+A first person firing range: three firearms, physics driven bullets, stationary
+and AI driven moving targets, ammunition crates, a HUD that reports accuracy, a
+main menu on its own map, a pause menu and a timed challenge mode.
 
 ---
 
 ## Contents
 
-1. [What makes this project unusual](#what-makes-this-project-unusual)
-2. [Getting it running](#getting-it-running)
-3. [Controls](#controls)
-4. [Repository structure](#repository-structure)
-5. [How the systems fit together](#how-the-systems-fit-together)
-6. [Design decisions worth knowing about](#design-decisions-worth-knowing-about)
-7. [Assignment checklist](#assignment-checklist)
+1. [Ready-made build](#ready-made-build) — download and play without installing the engine
+2. [What to download](#what-to-download) — to work with the source code
+3. [Installation](#installation)
+4. [Controls](#controls)
+5. [Repository structure](#repository-structure)
+6. [What makes this project unusual](#what-makes-this-project-unusual)
+7. [How it works](#how-it-works)
+8. [Assignment checklist](#assignment-checklist)
 
 ---
 
-## What makes this project unusual
+## Ready-made build
 
-**There is not a single authored asset in this repository.** The only binary
-files are two empty maps of 9 KB each.
+The packaged Windows game lives in the repository on **GitHub**. It is there
+rather than on the school Gitea because the archive weighs about 260 MB, and Git LFS,
+which files of that size need, is disabled on Gitea.
 
-The brief allows either Blueprints or C++. This project takes C++ all the way,
-and then goes one step further: it also avoids every kind of authored content.
-No meshes, no textures, no materials, no sounds, no animations, no UMG widgets,
-no input assets, and no level geometry are committed.
-
-Everything is built at runtime from what ships inside the engine:
-
-| Normally an asset | Here instead |
+| | |
 |---|---|
-| Weapon and target meshes | Primitives from `/Engine/BasicShapes`, assembled and tinted in code |
-| Materials | Dynamic instances of the engine `BasicShapeMaterial` |
-| Input actions and mapping contexts | `UInputAction` and `UInputMappingContext` objects built with `NewObject` |
-| UMG menus | Slate widgets written in C++ |
-| HUD widgets | Canvas drawing in `AHUD::DrawHUD` |
-| Reload and recoil animations | Procedural transform animation of the weapon |
-| Level geometry, lighting, player start | `AFRRangeBuilder`, which spawns the whole range when the session starts |
+| **File page** | https://github.com/UZhomart/firing-range/blob/main/Release/FiringRange-Win64.zip |
+| **Direct link** | https://github.com/UZhomart/firing-range/raw/main/Release/FiringRange-Win64.zip |
+| **Size** | 260 MB zipped, 380 MB extracted |
+| **Configuration** | Shipping, Windows 64-bit |
 
-The reason is practical rather than stylistic: a repository of plain text can be
-read, reviewed line by line, merged and diffed. A `.uasset` cannot. The trade
-off is that the range looks like blocks, and that trade is deliberate.
+### How to run it
 
-The two `.umap` files are the only exception. A map is the one thing the engine
-will not create from code at load time, so it has to exist as a file - but both
-maps are **empty** apart from a reference to their game mode.
+1. Download the archive from the direct link, or open the file page and press
+   the download icon on the right (**Download raw file**).
+2. Extract it: right click the archive → **Extract All…** → **Extract**.
+3. Open the `FiringRange-Win64` folder that appears and run **`FiringRange.exe`**.
+4. If Windows shows *"Windows protected your PC"*, press **More info** →
+   **Run anyway**. The build is not code signed, so SmartScreen does not
+   recognise it.
+5. If an error mentions `MSVCP140.dll` or `VCRUNTIME140.dll`, run
+   `Engine\Extras\Redist\en-us\UEPrereqSetup_x64.exe` from the same folder. It
+   installs the missing Microsoft libraries. Then run `FiringRange.exe` again.
+
+### What the computer needs
+
+- Windows 10 or 11, 64-bit
+- A graphics card with DirectX 11 or 12 support and an up to date driver
+
+Unreal Engine and Visual Studio are **not** needed to run the build. They are
+only needed to work with the source code, which the sections below cover.
 
 ---
 
-## Getting it running
+## What to download
 
-### Downloads
+| What | Link | Size | Why |
+|---|---|---|---|
+| **Visual Studio 2022 Community** | https://visualstudio.microsoft.com/vs/community/ | ~10–12 GB | The C++ compiler. Install it **first** |
+| **Epic Games account** | https://www.epicgames.com/id/register | — | Needed to download the engine, free |
+| **Unreal Engine 5.5** | https://www.unrealengine.com/en-US/download | ~35–40 GB | The engine itself |
+| Git LFS *(optional)* | https://git-lfs.com | ~10 MB | So that cloning the GitHub repository also downloads the build archive |
 
-| What | Link |
-|---|---|
-| Visual Studio 2022 Community | https://visualstudio.microsoft.com/vs/community/ |
-| Epic Games account | https://www.epicgames.com/id/register |
-| Unreal Engine 5.5 | https://www.unrealengine.com/en-US/download |
-| Git LFS (optional) | https://git-lfs.com |
+**Disk space:** about 63 GB free (engine + Visual Studio + build artefacts).
 
-About 63 GB of free disk space is needed for the engine, the toolchain and the
-build artefacts.
+---
 
-### Requirements
+## Installation
 
-- Unreal Engine 5.5
-- A C++ toolchain for your platform:
-  - **Windows** - Visual Studio 2022 with *Desktop development with C++* and the
-    *Game development with C++* workload
-  - **Linux** - clang, as installed by the engine's `Setup.sh`
-  - **macOS** - Xcode with the command line tools
+### 1. Visual Studio 2022
 
-### Steps
+Download it from the link above → run `VisualStudioSetup.exe` → in the workload
+selection tick two workloads:
 
-1. **Clone the repository.**
+- ☑ **Game development with C++**
+- ☑ **Desktop development with C++**
 
-   ```
-   git clone <repository-url> firing-range
-   cd firing-range
-   ```
+Nothing else is needed. Press **Install**.
 
-2. **Generate the project files and build.**
+> The order matters: the Unreal installer looks for the MSVC compiler when it
+> runs. If Visual Studio is not there yet, the engine installs without C++
+> support.
 
-   Right click `FiringRange.uproject` and choose *Generate Visual Studio project
-   files* on Windows, or run `GenerateProjectFiles` from your engine
-   installation on Linux and macOS. Then build the `FiringRangeEditor` target.
+### 2. Unreal Engine 5.5
 
-   Opening `FiringRange.uproject` directly also works: the editor offers to
-   build the missing module and does it for you.
+1. Download and install the **Epic Games Launcher** from the link above.
+2. Sign in with your Epic account.
+3. Pick the **Unreal Engine** tab on the left and **Library** at the top.
+4. Under *Engine Versions*, press the yellow **`+`**.
+5. On the new slot, press the **down arrow** next to the version number and
+   choose **5.5.x**. A newer version is offered by default, and it will not do.
+6. Press **Install**, then the **Options** link in the dialog, and untick
+   *Starter Content*, *Templates and Feature Packs*, *Engine Source*, and every
+   platform except Windows.
+7. Install.
 
-   If Windows asks *"How do you want to open this file?"*, close that dialog
-   without choosing anything: `.uproject` files are not associated with Unreal
-   on that machine. Open the project with the command from step 4 instead.
+> **If the Engine Versions list stays empty** and **Install Engine** does
+> nothing on a freshly created Epic account, wait a few hours. Access to the
+> engine is granted to new accounts with a delay.
 
-3. **The two maps are already in the repository** under `Content/Maps/`. Both
-   are empty and each already points at its game mode, so there is nothing to
-   do. If they ever go missing, let the editor recreate them:
+### 3. The project
 
-   ```
-   UnrealEditor "<project>/FiringRange.uproject" -ExecutePythonScript="<project>/Scripts/GenerateMaps.py"
-   ```
+```bash
+git clone https://01.tomorrow-school.ai/git/zutemiss/firing-range.git
+cd firing-range
+```
 
-   or, in a running editor, open *Window > Output Log*, switch the console at
-   the bottom to **Python**, and run
+Double click **`FiringRange.uproject`**. The editor asks whether to build the
+missing modules — answer **Yes**. The first compilation takes 5–15 minutes.
 
-   ```
-   exec(open(r"<project>/Scripts/GenerateMaps.py").read())
-   ```
+> **If Windows asks "How do you want to open this file?"**, choose nothing and
+> close the dialog. It means `.uproject` files are not associated with Unreal on
+> that machine. Open the project with the command from
+> [Starting the game](#5-starting-the-game), option B.
 
-4. **Start the game.** There are two ways. Both commands are for PowerShell and
-   an engine installed in the default location; replace the project path with
-   your own.
+### 4. The two maps
 
-   **A. Straight into the game, without the editor.** The game opens in its own
-   window and starts at the main menu:
+The maps are already in the repository: `Content/Maps/MainMenu.umap` and
+`Content/Maps/FiringRange.umap`. Both are **empty** — everything in them is
+built in code at startup — and each already points at its game mode.
+
+There is nothing to do. The steps below are only for the case where the maps
+have gone missing.
+
+**Restore with the script:** launch the editor so that it runs the script by
+itself:
+
+```powershell
+& "C:/Program Files/Epic Games/UE_5.5/Engine/Binaries/Win64/UnrealEditor.exe" `
+  "<project>/FiringRange.uproject" `
+  -ExecutePythonScript="<project>/Scripts/GenerateMaps.py"
+```
+
+Or, in an editor that is already open: `Window → Output Log`, switch the console
+at the bottom to **Python**, and run:
+
+```python
+exec(open(r"<project>/Scripts/GenerateMaps.py").read())
+```
+
+**Restore by hand:**
+
+1. `File → New Level → Empty Level` → `File → Save Current Level As…` →
+   `Content/Maps/MainMenu`
+2. Repeat, saving as `Content/Maps/FiringRange`
+
+### 5. Starting the game
+
+There are two ways. The commands below are for PowerShell and an engine
+installed in the default location. If the project lives elsewhere, replace
+`C:\Users\python\Desktop\firing-range` with your own path.
+
+#### Option A — straight into the game, without the editor
+
+The game opens in its own window, like any other game. The main menu comes
+first.
+
+```powershell
+& "C:\Program Files\Epic Games\UE_5.5\Engine\Binaries\Win64\UnrealEditor.exe" "C:\Users\python\Desktop\firing-range\FiringRange.uproject" -game -windowed -ResX=1280 -ResY=720
+```
+
+The `-game` flag runs the project as a game, and `-windowed -ResX -ResY` set a
+1280×720 window. To avoid typing the command every time, make a shortcut: right
+click the desktop → **New → Shortcut** → paste the same line without the leading
+`& ` → **Next** → name it `Firing Range` → **Finish**.
+
+#### Option B — through the editor
+
+1. Open the project in the editor:
 
    ```powershell
-   & "C:\Program Files\Epic Games\UE_5.5\Engine\Binaries\Win64\UnrealEditor.exe" "<project>\FiringRange.uproject" -game -windowed -ResX=1280 -ResY=720
+   & "C:\Program Files\Epic Games\UE_5.5\Engine\Binaries\Win64\UnrealEditor.exe" "C:\Users\python\Desktop\firing-range\FiringRange.uproject"
    ```
 
-   `-game` runs the project as a game, and `-windowed -ResX -ResY` set a
-   1280x720 window. On a weak machine, append `-ExecCmds="scalability 0"`.
+2. Wait for the editor window. On the first launch a *Compiling Shaders* counter
+   runs in the bottom right corner — it can take 10–40 minutes.
+3. Press the green **▶ Play** triangle in the top toolbar (or `Alt+P`).
+4. Stop the game with `Esc`, then the **■ Stop** button in the toolbar.
 
-   **B. Through the editor.** Open the project:
+#### What happens next
 
-   ```powershell
-   & "C:\Program Files\Epic Games\UE_5.5\Engine\Binaries\Win64\UnrealEditor.exe" "<project>\FiringRange.uproject"
-   ```
+1. The **FIRING RANGE** main menu opens — the separate `MainMenu` map.
+2. **START GAME** loads the `FiringRange` map, and the game mode builds the whole
+   range before the player is given a pawn.
+3. To quit: `Esc` → **MAIN MENU** → **QUIT**.
 
-   wait for the editor window (the first launch compiles shaders, which can take
-   a while), then press the green **Play** button in the toolbar, or `Alt+P`.
-   `Esc` followed by **Stop** ends the session.
-
-   Either way, the game boots into `MainMenu`, because
-   `Config/DefaultEngine.ini` names it as the default map and
-   `AFRMenuGameMode` as the default game mode. *Start Game* travels to the range
-   map, where `AFRRangeGameMode` builds the entire range before the player is
-   given a pawn. `Esc` → **Main Menu** → **Quit** closes the game.
-
-There is nothing to assign in the editor. No Blueprint has to be created, no
+Nothing has to be assigned in the editor: no Blueprint has to be created, no
 class has to be picked in a dropdown, and no actor has to be dragged into a
 level.
+
+#### On a weak machine
+
+With integrated graphics or 8 GB of memory, lower the quality in the editor:
+the **⚙ Settings** button in the top right → **Engine Scalability Settings** →
+**Low**. For option A, append `-ExecCmds="scalability 0"` to the command.
 
 ---
 
@@ -183,12 +234,12 @@ level.
 | `1` `2` `3` | Pistol, shotgun, sniper rifle |
 | Mouse wheel | Cycle weapons |
 | `T` | Start a timed challenge |
-| `Esc` | Pause menu |
+| `Esc` | Pause |
 
-A gamepad is mapped throughout, on the same actions.
+A gamepad is mapped to the same actions.
 
 Walk over an ammunition crate to restock. A crate is only consumed when the
-rounds actually fit, so walking over one while full leaves it standing.
+rounds actually fit, so walking over one with a full reserve leaves it standing.
 
 ---
 
@@ -196,159 +247,174 @@ rounds actually fit, so walking over one while full leaves it standing.
 
 ```
 firing-range/
-├── FiringRange.uproject
-├── README.md
-├── firing-range__ts.md
-├── .gitignore
-├── .gitattributes
-├── Config/
-│   ├── DefaultEngine.ini
-│   ├── DefaultGame.ini
-│   ├── DefaultInput.ini
-│   └── DefaultEditor.ini
-├── Content/
-│   └── Maps/
-│       ├── MainMenu.umap
-│       └── FiringRange.umap
-├── Scripts/
-│   └── GenerateMaps.py
-├── resources/
-└── Source/
-    ├── FiringRange.Target.cs
-    ├── FiringRangeEditor.Target.cs
-    └── FiringRange/
-        ├── FiringRange.Build.cs
-        ├── FiringRange.h / .cpp
-        ├── Core/
-        ├── Player/
-        ├── Weapons/
-        ├── Targets/
-        ├── Pickups/
-        ├── Level/
-        └── UI/
+├── FiringRange.uproject          project manifest
+├── README.md                     Russian documentation
+├── README.en.md                  this file
+├── firing-range__ts.md           assignment brief
+├── .gitignore  .gitattributes    git rules
+├── Config/                       engine configuration
+├── Content/Maps/                 two empty maps
+├── Release/                      packaged build archive (GitHub only)
+├── Scripts/                      helper scripts
+├── resources/                    images from the brief
+└── Source/                       source code
 ```
 
-### Every item, and why it is there
+### Root
 
-#### Root
-
-| Item | What it is |
+| File | Description |
 |---|---|
-| `FiringRange.uproject` | Project manifest. Names the engine version (5.5), the single runtime module, and the two plugins the project turns on: Enhanced Input, and the Python script plugin used only by the map generator. |
-| `README.md` | This file. |
-| `firing-range__ts.md` | The original assignment brief, kept under version control so the result can be checked against what was asked for. |
-| `.gitignore` | Keeps the generated half of an Unreal project out of the repository: `Binaries/`, `Intermediate/`, `Saved/`, `DerivedDataCache/`, IDE files. It also excludes `learn/`, which holds the authors' personal study notes and is not part of the deliverable. |
-| `.gitattributes` | Forces LF line endings inside the repository. Without it a file written on Windows arrives on Linux with stray carriage returns, which is the classic reason a project builds on one machine and not on another. |
+| `FiringRange.uproject` | Engine version (5.5), module list, enabled plugins |
+| `README.md` / `README.en.md` | Documentation in Russian and English |
+| `firing-range__ts.md` | The original brief, kept so the result can be checked against it |
+| `.gitignore` | Excludes the folders Unreal generates (`Binaries`, `Intermediate`, `Saved`, `DerivedDataCache`) and the personal study notes in `learn/` |
+| `.gitattributes` | Line endings are always LF — otherwise the project builds on Windows and fails on Linux. The build archive is stored with Git LFS |
 
-#### `Config/`
+### `Config/`
 
-| Item | What it is |
+| File | Description |
 |---|---|
-| `DefaultEngine.ini` | Read by the engine before any of our code runs. Names the boot map and the default game mode and game instance, turns off motion blur and auto exposure because both interfere with aiming, sets gravity, and declares the custom collision channel bullets use. |
-| `DefaultGame.ini` | Project name, version, authors, and which maps get cooked into a packaged build. |
-| `DefaultInput.ini` | Switches the player input and input component classes over to Enhanced Input. Without these two lines every input binding in the project silently does nothing. It also turns off mouse smoothing and acceleration, so the sensitivity slider maps one to one onto view rotation. |
-| `DefaultEditor.ini` | Editor only conveniences: Play In Editor runs as a single standalone window, which is how the packaged game behaves. |
+| `DefaultEngine.ini` | Startup map, default classes, rendering settings, gravity, the collision channel for bullets |
+| `DefaultGame.ini` | Name, version, authors, maps to package |
+| `DefaultInput.ini` | Switches the engine to Enhanced Input, turns mouse smoothing off |
+| `DefaultEditor.ini` | Play In Editor settings |
 
-#### `Scripts/`
+### `Scripts/`
 
-| Item | What it is |
+| File | Description |
 |---|---|
-| `GenerateMaps.py` | Editor script that creates or restores the two maps and sets their game mode overrides. Only needed if the maps go missing. |
+| `GenerateMaps.py` | Creates or restores both maps and sets their game modes. Only needed if the maps go missing |
 
-#### `Content/Maps/`
+### `Content/Maps/`
 
-| Item | What it is |
+| File | Description |
 |---|---|
-| `MainMenu.umap` | Empty main menu map, game mode `FRMenuGameMode`. |
-| `FiringRange.umap` | Empty range map, game mode `FRRangeGameMode`. Everything in it is spawned by `FRRangeBuilder`. |
+| `MainMenu.umap` | Empty main menu map, game mode `FRMenuGameMode` |
+| `FiringRange.umap` | Empty range map, game mode `FRRangeGameMode`. Everything in it is built by `FRRangeBuilder` |
 
-#### `Source/` - build configuration
+### `Release/`
 
-| Item | What it is |
+| File | Description |
 |---|---|
-| `FiringRange.Target.cs` | Build rules for the packaged game. |
-| `FiringRangeEditor.Target.cs` | Build rules for the editor. |
-| `FiringRange.Build.cs` | Module dependencies, one per line with a comment saying why each is needed. |
-| `FiringRange.h` / `.cpp` | Module entry point and the `LogFiringRange` log category every subsystem writes to. |
+| `FiringRange-Win64.zip` | The packaged Windows game, stored with Git LFS. It only exists in the GitHub repository — LFS is disabled on Gitea |
 
-#### `Source/FiringRange/Core/` - rules and shared data
+### `Source/` — build configuration
 
-| Item | What it is |
+| File | Description |
 |---|---|
-| `FRTypes.h` | The vocabulary of the project: ammunition families, hit zones, movement patterns, difficulty levels, session states, and the `FFRRangeStats` scoreboard struct. Everything else speaks in these terms. |
-| `FRVisualUtils.h` / `.cpp` | Loads engine primitives and builds tinted dynamic materials. The single place that knows the project has no art. |
-| `FRSaveGame.h` / `.cpp` | Persistent settings and records on disk. |
-| `FRGameInstance.h` / `.cpp` | The only object that survives travelling between maps, so it owns the settings and the personal best. Broadcasts when a setting changes so listeners apply it immediately. |
-| `FRRangeGameState.h` / `.cpp` | The scoreboard. The game mode writes it, the HUD reads it, and neither talks to the other. |
-| `FRRangeGameMode.h` / `.cpp` | The rules: what a hit zone is worth, when a target respawns, what a restart does, and the timed challenge clock. Also builds the range during `InitGame`, before the player exists. |
-| `FRMenuGameMode.h` / `.cpp` | Game mode of the menu map. No weapons, no scoring, no HUD. |
-| `FRMenuPlayerController.h` / `.cpp` | Puts the main menu in the viewport and answers the two entries that leave it. |
+| `FiringRange.Target.cs` | Build rules for the game |
+| `FiringRangeEditor.Target.cs` | Build rules for the editor |
+| `FiringRange.Build.cs` | Module dependencies, each with a comment explaining why it is needed |
+| `FiringRange.h` / `.cpp` | Module entry point and the `LogFiringRange` log category |
 
-#### `Source/FiringRange/Player/`
+### `Source/FiringRange/Core/` — rules and shared data
 
-| Item | What it is |
+| File | Description |
 |---|---|
-| `FRCharacter.h` / `.cpp` | The player: movement, camera, the whole Enhanced Input setup built in code, the weapon loadout, aiming, and the ammunition reserve. |
-| `FRPlayerController.h` / `.cpp` | What outlives the pawn: input modes, camera pitch limits, the pause state machine and the challenge key. |
-| `FRHUD.h` / `.cpp` | Everything on screen during play, drawn on the canvas: the dynamic crosshair, score and accuracy, magazine and reserve, reload progress, hit markers and the challenge countdown. |
+| `FRTypes.h` | The vocabulary of the project: ammunition families, hit zones, movement patterns, difficulty, the scoreboard struct |
+| `FRVisualUtils` | Loads engine primitives and creates tinted materials |
+| `FRSaveGame` | What is stored on disk: settings and the personal best |
+| `FRGameInstance` | The only object that survives a level change. Owns the settings |
+| `FRRangeGameState` | The session scoreboard: score, accuracy, streak, timer |
+| `FRRangeGameMode` | The rules: zone values, restart, difficulty, timed challenge. Builds the range |
+| `FRMenuGameMode` | Game mode of the menu map |
+| `FRMenuPlayerController` | Shows the main menu and travels to the range map |
 
-#### `Source/FiringRange/Weapons/`
+### `Source/FiringRange/Player/`
 
-| Item | What it is |
+| File | Description |
 |---|---|
-| `FRWeaponBase.h` / `.cpp` | The weapon state machine: rate of fire, magazine, reload, spread, recoil, the ballistic aiming solution and the procedural view model animation. The three firearms share all of it. |
-| `FRPistol.h` / `.cpp` | Semi automatic sidearm. The reference the others are tuned against. |
-| `FRShotgun.h` / `.cpp` | Eight pellets per trigger pull and a shell by shell reload that firing can interrupt. |
-| `FRSniperRifle.h` / `.cpp` | Bolt action, a magnifying scope, and a reticle of its own on the HUD. |
-| `FRProjectile.h` / `.cpp` | The bullet: a swept sphere under `UProjectileMovementComponent`, pulled down by gravity, which reports to the game mode whether it scored. |
-| `FRImpactEffect.h` / `.cpp` | The flash and scorch mark at an impact, animated and destroyed in under half a second. |
+| `FRCharacter` | The character: movement, camera, Enhanced Input, weapon loadout, ammunition reserve |
+| `FRPlayerController` | Input modes, camera pitch limits, pause, starting the challenge |
+| `FRHUD` | The whole in-game interface: crosshair, score, accuracy, ammunition, hit markers, timer |
 
-#### `Source/FiringRange/Targets/`
+### `Source/FiringRange/Weapons/`
 
-| Item | What it is |
+| File | Description |
 |---|---|
-| `FRTargetBase.h` / `.cpp` | Board, head and post, three scoring zones, the knockdown animation and the respawn timer. A pawn rather than an actor, because a controller can only possess a pawn. |
-| `FRStationaryTarget.h` / `.cpp` | The fixed boards of the static lanes. |
-| `FRMovingTarget.h` / `.cpp` | The body of a moving target: a pawn with a floating movement component and no decisions of its own. |
-| `FRTargetAIController.h` / `.cpp` | The brain: four movement patterns, from following a route to unpredictable strafing. |
-| `FRPatrolPath.h` / `.cpp` | A spline that defines where a moving target may go. |
+| `FRWeaponBase` | The weapon state machine: rate of fire, magazine, reload, spread, recoil, ballistics, view model animation |
+| `FRPistol` | Semi automatic pistol |
+| `FRShotgun` | Shotgun: 8 pellets per shot, shell by shell reload |
+| `FRSniperRifle` | Sniper rifle: bolt action, magnifying scope |
+| `FRProjectile` | The bullet: a physical projectile under gravity that reports when its flight is over |
+| `FRImpactEffect` | Flash and mark at an impact |
 
-#### `Source/FiringRange/Pickups/`
+### `Source/FiringRange/Targets/`
 
-| Item | What it is |
+| File | Description |
 |---|---|
-| `FRAmmoPickup.h` / `.cpp` | The ammunition crates: collected on overlap, only when the rounds fit, and back after a delay. |
+| `FRTargetBase` | Board, head, post, three hit zones, knockdown and respawn |
+| `FRStationaryTarget` | The fixed targets of the static lanes |
+| `FRMovingTarget` | The body of a moving target |
+| `FRTargetAIController` | The brain: four movement patterns |
+| `FRPatrolPath` | Spline patrol route |
 
-#### `Source/FiringRange/Level/`
+### `Source/FiringRange/Pickups/`
 
-| Item | What it is |
+| File | Description |
 |---|---|
-| `FRRangeBuilder.h` / `.cpp` | Builds the range: ground, berms, firing line and canopy, lane dividers, distance markers, both target sections, the crates, the lighting and the player start. |
+| `FRAmmoPickup` | Ammunition crates: collected on contact, back after a delay |
 
-#### `Source/FiringRange/UI/`
+### `Source/FiringRange/Level/`
 
-| Item | What it is |
+| File | Description |
 |---|---|
-| `FRUIStyle.h` / `.cpp` | Colours, fonts, brushes and the shared button and slider styles. Built from solid colour brushes and the engine's own Roboto, so no style asset is needed. |
-| `SFRMainMenu.h` / `.cpp` | The front end: start, settings, quit, and the personal best line. |
-| `SFRSettingsPanel.h` / `.cpp` | Mouse sensitivity, aim sensitivity, inverted look and difficulty. Used by both the main menu and the pause menu, which is why the two always agree. |
-| `SFRPauseMenu.h` / `.cpp` | Resume, settings, restart and return to the main menu, over a dimmed view of the frozen range. |
+| `FRRangeBuilder` | Builds the range: ground, berms, canopy, dividers, targets, crates, lighting, player start |
+
+### `Source/FiringRange/UI/`
+
+| File | Description |
+|---|---|
+| `FRUIStyle` | Colours, fonts, button and slider styles |
+| `SFRMainMenu` | Main menu: start, settings, quit, personal best |
+| `SFRSettingsPanel` | Mouse sensitivity, inverted look, difficulty. Shared by the menu and the pause screen |
+| `SFRPauseMenu` | Resume, settings, restart, back to the main menu |
 
 ---
 
-## How the systems fit together
+## What makes this project unusual
+
+**There is not a single authored asset in this repository.** The only binary
+files are two empty maps of 9 KB each.
+
+The brief allows Blueprints or C++. This project uses C++ throughout and goes one
+step further: it has no authored content at all — no meshes, textures,
+materials, sounds, animations, UMG widgets, input assets, or level geometry.
+
+| Normally an asset | Here instead |
+|---|---|
+| Weapon and target meshes | Primitives from `/Engine/BasicShapes`, assembled and tinted in code |
+| Materials | Dynamic instances of the engine `BasicShapeMaterial` |
+| `InputAction`, `InputMappingContext` | Objects created with `NewObject` at runtime |
+| UMG menus | Slate widgets written in C++ |
+| HUD widgets | Canvas drawing in `AHUD::DrawHUD` |
+| Reload and recoil animations | Procedural transform animation of the weapon |
+| Level geometry, lighting, player start | `AFRRangeBuilder`, which builds everything when the session starts |
+
+The reason is practical rather than stylistic: a repository of plain text can be
+read, reviewed line by line, merged and diffed. A `.uasset` cannot. The trade
+off is that the range looks like blocks, and that trade is deliberate.
+
+The two `.umap` files are the only exception. A map is the one thing the engine
+cannot create from code at load time, so it has to exist as a file — but both
+maps are **empty**, holding only a reference to their game mode, and everything
+else appears at startup.
+
+---
+
+## How it works
 
 ```
-             UFRGameInstance                  survives level travel
-             (settings, records)              ─────────────────────
+             UFRGameInstance                  survives level changes
+             (settings, record)               ──────────────────────
                      │
         ┌────────────┴─────────────┐
         │                          │
   AFRMenuGameMode           AFRRangeGameMode ─── AFRRangeBuilder
-  (MainMenu map)            (FiringRange map)    (builds everything)
+  (MainMenu map)            (FiringRange map)    (builds the range)
         │                          │
   AFRMenuPlayerController    AFRRangeGameState ──────────► AFRHUD
-  → SFRMainMenu              (the scoreboard)              (reads only)
+  → SFRMainMenu              (scoreboard)                  (reads only)
       → SFRSettingsPanel            ▲
                                     │ writes
                           ┌─────────┴──────────┐
@@ -357,76 +423,74 @@ firing-range/
                   (shots fired)          (hits, zones)
                           │                    ▲
                     AFRProjectile ─────────────┘
-                    (damage, outcome)
+                    (damage, end of flight)
 ```
 
-One trigger pull travels through the project like this:
+One shot travels through the project like this:
 
 1. `AFRCharacter` receives the fire action and calls `StartFire` on the weapon.
 2. `AFRWeaponBase` checks the rate of fire and the magazine, spends a round,
-   traces forward from the camera to find the point the crosshair covers, and
-   launches one projectile per pellet towards it - aimed slightly high, by
-   exactly the distance the bullet will fall on the way.
-3. It announces how many projectiles left the muzzle. The game mode adds them to
-   the denominator of the accuracy figure.
-4. `AFRProjectile` flies, and on impact applies point damage through the engine
-   damage pipeline.
+   traces forward from the camera to find what the crosshair covers, and
+   launches the projectiles at that point — aimed slightly high, by exactly the
+   distance the bullet will fall on the way.
+3. The weapon reports how many projectiles left the muzzle. The game mode adds
+   them to the denominator of the accuracy figure.
+4. `AFRProjectile` flies and, on impact, applies damage through the engine's
+   standard damage pipeline.
 5. `AFRTargetBase::TakeDamage` works out which zone was struck, announces the
    hit, falls over and schedules its own return.
-6. `AFRRangeGameMode` turns the zone and the range into points and writes them to
-   `AFRRangeGameState`.
-7. `AFRHUD` was listening to the game state, and draws a hit marker.
+6. `AFRRangeGameMode` turns the zone and the range into points and writes them
+   to `AFRRangeGameState`.
+7. `AFRHUD`, subscribed to the scoreboard, draws a hit marker.
 
 At no point does the bullet know what a target is, the target know what a score
 is, or the HUD know what a weapon is.
 
----
-
-## Design decisions worth knowing about
+### Design decisions worth knowing about
 
 **A truthful crosshair and real ballistics at the same time.** The brief asks
 for a crosshair that marks the exact point of impact *and* for bullets that obey
-physics. Those pull in opposite directions, because a bullet with gravity falls
-below where it was pointed. `AFRWeaponBase::ComputeLaunchVelocity` resolves it:
+physics. Those pull in opposite directions: a bullet under gravity falls below
+where the crosshair points. `AFRWeaponBase::ComputeLaunchVelocity` resolves it —
 it works out the flight time from the distance and the muzzle speed, works out
-the drop over that time, and aims the muzzle that far above the crosshair. The
-bullet arcs, and it still lands on the dot.
+the drop over that time, and aims the barrel exactly that far higher. The bullet
+arcs and still lands on the dot.
 
-**The crosshair opens when the weapon is less accurate.** Its gap is the current
-spread cone projected into pixels, so it widens while running and closes while
-aiming. A crosshair that stayed the same size would be lying.
+**The crosshair opens when the weapon is less accurate.** The gap between its
+arms is the spread cone projected into pixels. It widens while running and
+closes while aiming. A crosshair of constant size would be lying.
 
 **Recoil is written into the control rotation in degrees**, not fed through
 `AddControllerPitchInput`. Input goes through the mouse sensitivity setting, so
 a player on high sensitivity would otherwise get a completely different weapon.
 
 **Bullets have their own collision channel.** A shotgun releases eight pellets
-from the same muzzle point on the same frame. On any shared channel they would
-block each other at spawn. The `Projectile` channel declared in
-`DefaultEngine.ini` lets bullets ignore bullets and nothing else.
+from the same point on the same frame. On a shared channel they would block each
+other at spawn.
 
 **Targets are pawns.** Only a pawn can be possessed by an `AAIController`, and
 the moving targets need one.
 
-**The target AI never queries navigation.** A navigation mesh is data baked into
-a level asset, and this project has no level asset to bake it into. The
-controller follows its spline analytically instead, which needs no navigation
-data and gives exact, repeatable motion - which is what a training range wants
-anyway.
+**The target AI does not use navigation.** A navigation mesh is data baked into
+a level asset, and this project has no level asset to bake it into. Following a
+spline analytically needs no data and gives exact, repeatable motion — which is
+what a training range wants anyway.
 
-**A miss is reported by the bullet, not by the trigger.** Whether a shot missed
-is unknowable at the moment it is fired, because the bullet is still travelling.
-`AFRProjectile` reports its own outcome when it resolves, including when it
-simply runs out of flight time.
+**The bullet closes the shot, the target scores it.** When the trigger is
+pulled, nobody knows yet whether the shot will hit: the bullet is still in the
+air. So `AFRProjectile` reports when its flight is over, including when it simply
+runs out of time. Whether it hit is said only by the target, through its own
+event. The damage result cannot be used for that: in Unreal every actor accepts
+damage by default, and a wall "accepts" a bullet just as a bullseye does.
+
+**Cross platform from the start.** Line endings in the repository are always LF
+(`.gitattributes`), `#include` paths are fully qualified and in their exact case
+for the case sensitive file systems of Linux and macOS, quitting uses
+`UKismetSystemLibrary::QuitGame` rather than a platform call, and the code
+contains no absolute paths.
 
 **The range is outdoors.** A sun, a sky atmosphere and a real time capture sky
-light give correct lighting with no imported content. An indoor room would have
-needed light fixtures and a captured cubemap.
-
-**Cross platform from the start.** LF line endings enforced by
-`.gitattributes`, fully qualified include paths so case sensitive file systems
-are happy, `UKismetSystemLibrary::QuitGame` instead of a platform call, and no
-absolute paths anywhere.
+light give correct lighting without a single imported file.
 
 ---
 
@@ -436,30 +500,30 @@ absolute paths anywhere.
 |---|---|
 | Main menu on a separate map | `MainMenu` map, `AFRMenuGameMode`, `SFRMainMenu` |
 | Start Game button | `SFRMainMenu` → `AFRMenuPlayerController::HandleStartGame` |
-| Settings with mouse sensitivity | `SFRSettingsPanel`, persisted by `UFRGameInstance` |
+| Mouse sensitivity setting | `SFRSettingsPanel`, persisted by `UFRGameInstance` |
 | Quit button | `AFRMenuPlayerController::HandleQuitGame` |
-| Accurate crosshair | `AFRHUD::DrawCrosshair` with `AFRWeaponBase::ComputeLaunchVelocity` |
+| Accurate crosshair | `AFRHUD::DrawCrosshair` + `AFRWeaponBase::ComputeLaunchVelocity` |
 | Accuracy readout | `FFRRangeStats::GetAccuracy`, drawn by `AFRHUD::DrawScorePanel` |
 | Ammunition and reload status | `AFRHUD::DrawWeaponPanel` |
 | Player movement | `AFRCharacter`, Enhanced Input |
-| Aim, shoot, reload input | `AFRCharacter::BuildInputActions` |
-| Ammo pickups | `AFRAmmoPickup` |
+| Aim, fire and reload input | `AFRCharacter::BuildInputActions` |
+| Ammunition pickups | `AFRAmmoPickup` |
 | Recoil | `AFRWeaponBase::ApplyRecoil` and `UpdateRecoil` |
 | Reload animation | `AFRWeaponBase::UpdateViewModel`, procedural |
 | Projectile physics | `AFRProjectile` |
 | Hit detection with feedback | `AFRProjectile::HandleHit`, `AFRImpactEffect` |
 | Stationary target | `AFRStationaryTarget` |
-| Moving target with AI | `AFRMovingTarget` and `AFRTargetAIController` |
-| Target hit detection | `AFRTargetBase::TakeDamage` and `ResolveHitZone` |
+| Moving target with AI | `AFRMovingTarget` + `AFRTargetAIController` |
+| Target hit detection | `AFRTargetBase::TakeDamage`, `ResolveHitZone` |
 | Targets respawn on a timer | `AFRTargetBase::HandleKnockedDown` |
-| Coherent theme and lighting | `AFRRangeBuilder::BuildLighting` and the palette above it |
+| Coherent theme and lighting | `AFRRangeBuilder::BuildLighting` and the palette next to it |
 | Stationary section | `AFRRangeBuilder::BuildStationarySection` |
 | Moving section | `AFRRangeBuilder::BuildMovingSection` |
 | Starts with a loaded weapon | `AFRWeaponBase::BeginPlay` |
 | Pause menu | `AFRPlayerController::OpenPauseMenu`, `SFRPauseMenu` |
 | Restart from the pause menu | `AFRRangeGameMode::RestartRange` |
-| Return to the main menu | `AFRPlayerController::HandleQuitToMainMenu` |
-| **Bonus** - several weapons | `AFRPistol`, `AFRShotgun`, `AFRSniperRifle` |
-| **Bonus** - advanced target AI | `EFRTargetMotion`, four patterns, three difficulty levels |
-| **Bonus** - hit zones and headshots | `AFRTargetBase::ResolveHitZone`, scored in `AFRRangeGameMode` |
-| **Bonus** - timed challenge | `AFRRangeGameMode::StartTimedChallenge`, key `T` |
+| Back to the main menu | `AFRPlayerController::HandleQuitToMainMenu` |
+| **Bonus** — several weapons | `AFRPistol`, `AFRShotgun`, `AFRSniperRifle` |
+| **Bonus** — advanced target AI | `EFRTargetMotion`, four patterns, three difficulty levels |
+| **Bonus** — hit zones and headshots | `AFRTargetBase::ResolveHitZone`, scored in `AFRRangeGameMode` |
+| **Bonus** — timed challenge | `AFRRangeGameMode::StartTimedChallenge`, key `T` |
