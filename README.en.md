@@ -42,7 +42,8 @@ and a timed challenge mode.
 
 ## What makes this project unusual
 
-**There is not a single binary asset in this repository.**
+**There is not a single authored asset in this repository.** The only binary
+files are two empty maps of 9 KB each.
 
 The brief allows either Blueprints or C++. This project takes C++ all the way,
 and then goes one step further: it also avoids every kind of authored content.
@@ -65,9 +66,9 @@ The reason is practical rather than stylistic: a repository of plain text can be
 read, reviewed line by line, merged and diffed. A `.uasset` cannot. The trade
 off is that the range looks like blocks, and that trade is deliberate.
 
-The two `.umap` files are the only exception. They are the one thing the engine
-will not create from code at load time, and they are **empty** - see the setup
-step below.
+The two `.umap` files are the only exception. A map is the one thing the engine
+will not create from code at load time, so it has to exist as a file - but both
+maps are **empty** apart from a reference to their game mode.
 
 ---
 
@@ -112,13 +113,15 @@ build artefacts.
    Opening `FiringRange.uproject` directly also works: the editor offers to
    build the missing module and does it for you.
 
-3. **Create the two maps.** They are not in the repository because a `.umap` is
-   a binary asset. They are empty, so this takes four clicks:
+3. **The two maps are already in the repository** under `Content/Maps/`. Both
+   are empty and each already points at its game mode, so there is nothing to
+   do. If they ever go missing, let the editor recreate them:
 
-   - *File > New Level > Empty Level*, save as `Content/Maps/MainMenu`
-   - *File > New Level > Empty Level*, save as `Content/Maps/FiringRange`
+   ```
+   UnrealEditor "<project>/FiringRange.uproject" -ExecutePythonScript="<project>/Scripts/GenerateMaps.py"
+   ```
 
-   Or let the editor do it: open *Window > Output Log*, switch the console at
+   or, in a running editor, open *Window > Output Log*, switch the console at
    the bottom to **Python**, and run
 
    ```
@@ -175,6 +178,10 @@ firing-range/
 │   ├── DefaultGame.ini
 │   ├── DefaultInput.ini
 │   └── DefaultEditor.ini
+├── Content/
+│   └── Maps/
+│       ├── MainMenu.umap
+│       └── FiringRange.umap
 ├── Scripts/
 │   └── GenerateMaps.py
 ├── resources/
@@ -218,7 +225,14 @@ firing-range/
 
 | Item | What it is |
 |---|---|
-| `GenerateMaps.py` | Editor script that creates the two empty maps and sets their game mode override. Optional - the same thing takes four clicks by hand. |
+| `GenerateMaps.py` | Editor script that creates or restores the two maps and sets their game mode overrides. Only needed if the maps go missing. |
+
+#### `Content/Maps/`
+
+| Item | What it is |
+|---|---|
+| `MainMenu.umap` | Empty main menu map, game mode `FRMenuGameMode`. |
+| `FiringRange.umap` | Empty range map, game mode `FRRangeGameMode`. Everything in it is spawned by `FRRangeBuilder`. |
 
 #### `Source/` - build configuration
 
