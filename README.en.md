@@ -30,13 +30,14 @@ main menu on its own map, a pause menu and a timed challenge mode.
 
 1. [Ready-made build](#ready-made-build) — download and play without installing the engine
 2. [What to download](#what-to-download) — to work with the source code
-3. [Installation](#installation)
-4. [Other platforms](#other-platforms) — macOS and Linux
-5. [Controls](#controls)
-6. [Repository structure](#repository-structure)
-7. [What makes this project unusual](#what-makes-this-project-unusual)
-8. [How it works](#how-it-works)
-9. [Assignment checklist](#assignment-checklist)
+3. [Automatic setup](#automatic-setup) — the `fr` and `make` scripts
+4. [Manual setup](#manual-setup)
+5. [Other platforms](#other-platforms) — macOS and Linux
+6. [Controls](#controls)
+7. [Repository structure](#repository-structure)
+8. [What makes this project unusual](#what-makes-this-project-unusual)
+9. [How it works](#how-it-works)
+10. [Assignment checklist](#assignment-checklist)
 
 ---
 
@@ -88,11 +89,101 @@ only needed to work with the source code, which the sections below cover.
 | **Unreal Engine 5.5** | https://www.unrealengine.com/en-US/download | ~35–40 GB | The engine itself |
 | Git LFS *(optional)* | https://git-lfs.com | ~10 MB | So that cloning the GitHub repository also downloads the build archive |
 
-**Disk space:** about 63 GB free (engine + Visual Studio + build artefacts).
+**Disk space:** about 65 GB free: the engine takes about 40 GB, Visual Studio
+with the Windows SDK about 15 GB, the project build and a packaged game about
+10 GB more.
+
+Everything in the table except the engine itself can be installed by the
+script — see [Automatic setup](#automatic-setup).
 
 ---
 
-## Installation
+## Automatic setup
+
+The repository has scripts that check the computer, install missing tools,
+build the project and start the game. It is an alternative to the
+[manual setup](#manual-setup) with the same result.
+
+### What the script does and what is left to you
+
+| Step | Windows | macOS | Linux |
+|---|---|---|---|
+| Check the computer: memory, cores, disk space | ✅ | ✅ | ✅ |
+| Git | ✅ installs | hint | hint |
+| Visual Studio 2022 with the required components | ✅ installs or adds components | — | — |
+| Xcode | — | ✋ by hand, the script checks the version | — |
+| Epic Games Launcher | ✅ installs | ✅ via Homebrew, otherwise gives a link | — |
+| **Unreal Engine 5.5** | ✋ by hand in the launcher | ✋ by hand in the launcher | ✋ by hand from Epic's site |
+| Build C++, maps, run, package | ✅ | ✅ | ✅ |
+
+✋ marks a step the script cannot do: Epic hands out the engine only after you
+sign in, and Apple hands out Xcode only with an Apple ID. At such a step the
+script stops and tells you what to click. Run it again afterwards: finished
+steps are skipped.
+
+### How to run it
+
+**Windows** — in the project folder, in Command Prompt:
+
+```bat
+fr setup
+```
+
+In PowerShell the command needs a dot: `.\fr setup`. If something is missing,
+Windows asks for administrator rights — they are needed only to install Visual
+Studio, Git and the launcher. Visual Studio downloads about 12 GB, which takes
+30–60 minutes.
+
+**macOS and Linux** — in Terminal, in the project folder:
+
+```bash
+make setup
+```
+
+On a Mac, `make` comes with Xcode. Without it, `bash Scripts/fr.sh setup` does
+the same.
+
+### Commands
+
+| Windows | macOS / Linux | What it does |
+|---|---|---|
+| `fr check` | `make check` | Checks the computer, the tools and the project. Changes nothing |
+| `fr setup` | `make setup` | Installs what is missing and builds the project |
+| `fr build` | `make build` | Builds the C++ module |
+| `fr run` | `make run` | Starts the game in a 1280×720 window |
+| `fr run -fullscreen` | `make run ARGS=-fullscreen` | Starts the game with your own window options |
+| `fr editor` | `make editor` | Opens the project in the editor |
+| `fr maps` | `make maps` | Creates the maps if they are missing |
+| `fr package` | `make package` | Builds a Shipping game into `Packaged/` and zips it |
+| `fr package linux` | — | Builds the Linux version right on Windows (see [Linux](#linux)) |
+| `fr clean` | `make clean` | Deletes `Binaries/` and `Intermediate/` |
+| `fr clean all` | `make clean ARGS=all` | Also deletes `DerivedDataCache/` and `Packaged/` |
+| `fr push` | `make push` | Authors only: pushes `main` to Gitea and updates GitHub |
+
+`run`, `editor`, `maps` and `package` rebuild the C++ module by themselves when
+the sources have changed.
+
+The scripts find the engine on their own: in the default folder and in the
+launcher's list of installs. If the engine lives elsewhere, set `UE_ROOT`:
+
+```powershell
+$env:UE_ROOT = "D:\Epic Games\UE_5.5"      # Windows, PowerShell
+```
+
+```bash
+export UE_ROOT="$HOME/UnrealEngine"        # macOS, Linux
+```
+
+> **`make` on Windows** works too once it is installed:
+> `winget install ezwinports.make`.
+>
+> **Why `GNUmakefile` and not `Makefile`.** On Linux, Unreal's project file
+> generator writes its own `Makefile` into the project root. GNU make looks for
+> `GNUmakefile` first, so our file is read first and the two never collide.
+
+---
+
+## Manual setup
 
 ### 1. Visual Studio 2022
 
@@ -173,6 +264,9 @@ exec(open(r"<project>/Scripts/GenerateMaps.py").read())
 
 ### 5. Starting the game
 
+The shortest way is `fr run` (see [Automatic setup](#automatic-setup)). Below is
+the same without the script.
+
 There are two ways. The commands below are for PowerShell and an engine
 installed in the default location. If the project lives elsewhere, replace
 `C:\Users\python\Desktop\firing-range` with your own path.
@@ -236,9 +330,23 @@ application on macOS has to be opened with right click → **Open**.
 
 What the Mac needs:
 
-- **Xcode** from the App Store
+- **Xcode** from the App Store: https://apps.apple.com/app/xcode/id497799835
 - **Unreal Engine 5.5** for macOS — through the Epic Games Launcher, the same way
-  as in [Installation](#2-unreal-engine-55)
+  as in [Manual setup](#2-unreal-engine-55)
+
+> **The Xcode version matters.** UE 5.5 accepts only Xcode **15.2 to 16.x** — the
+> range is written in the engine file `Engine/Config/Apple/Apple_SDK.json`. With
+> a newer Xcode the build will not start. A matching version can be downloaded
+> from https://developer.apple.com/download/all/ (Apple ID required), unpacked
+> next to the current one and selected without administrator rights:
+>
+> ```bash
+> export DEVELOPER_DIR=/Applications/Xcode_16.4.app/Contents/Developer
+> ```
+
+**The easy way** is the script: `make setup`, then `make run` or
+`make package`. It checks the Xcode version, finds the engine, builds and
+packages the project. The commands below do the same by hand.
 
 **Run the project without packaging** — the same as option A on Windows:
 
@@ -259,11 +367,11 @@ takes a few minutes.
   -build -cook -stage -pak -compressed -archive -archivedirectory="$PWD/Packaged"
 ```
 
-The application appears in `Packaged/Mac/FiringRange.app`. If macOS says the
+The `.app` application appears in the `Packaged/Mac/` folder. If macOS says the
 application is damaged or cannot be verified, remove its quarantine attribute:
 
 ```bash
-xattr -cr Packaged/Mac/FiringRange.app
+xattr -cr Packaged/Mac/*.app
 ```
 
 > The code was written to be cross platform, but the project has not been built
@@ -272,10 +380,22 @@ xattr -cr Packaged/Mac/FiringRange.app
 
 ### Linux
 
-A Linux build can be made directly on Windows. It needs Epic's cross-compile
-toolchain — clang for Linux, in the version listed in the UE 5.5 requirements.
-Once it is installed, `-platform=Win64` in the packaging command becomes
-`-platform=Linux`.
+**Building on Windows.** It needs Epic's cross-compile toolchain — clang for
+Linux. For UE 5.5 that is version `v23_clang-18.1.0-rockylinux8`:
+
+| | |
+|---|---|
+| **Download** | https://cdn.unrealengine.com/CrossToolchain_Linux/v23_clang-18.1.0-rockylinux8.exe |
+| **Size** | about 1 GB |
+
+The installer sets the `LINUX_MULTIARCH_ROOT` variable by itself. After
+installing, open a new terminal window and run `fr package linux` — or replace
+`-platform=Win64` with `-platform=Linux` in the packaging command. The result
+is `Packaged/FiringRange-Linux.zip`.
+
+**Building on Linux itself.** There is no launcher for Linux: the engine comes
+as an archive from https://www.unrealengine.com/linux (an Epic sign-in is
+required). Unpack it, for example to `~/UnrealEngine`, and run `make setup`.
 
 **A Linux build will not run on a Mac.** macOS is not Linux: they use different
 executable formats (Mach-O and ELF), different system libraries and different
@@ -312,6 +432,8 @@ rounds actually fit, so walking over one with a full reserve leaves it standing.
 ```
 firing-range/
 ├── FiringRange.uproject          project manifest
+├── fr.cmd                        commands for Windows: fr setup, fr run…
+├── GNUmakefile                   the same commands through make
 ├── README.md                     Russian documentation
 ├── README.en.md                  this file
 ├── firing-range__ts.md           assignment brief
@@ -329,6 +451,8 @@ firing-range/
 | File | Description |
 |---|---|
 | `FiringRange.uproject` | Engine version (5.5), module list, enabled plugins |
+| `fr.cmd` | Entry point on Windows: passes the command on to `Scripts/fr.ps1` |
+| `GNUmakefile` | Short commands `make setup`, `make run` and others. Calls `fr.ps1` on Windows and `fr.sh` on macOS and Linux |
 | `README.md` / `README.en.md` | Documentation in Russian and English |
 | `firing-range__ts.md` | The original brief, kept so the result can be checked against it |
 | `.gitignore` | Excludes the folders Unreal generates (`Binaries`, `Intermediate`, `Saved`, `DerivedDataCache`) and the personal study notes in `learn/` |
@@ -347,6 +471,8 @@ firing-range/
 
 | File | Description |
 |---|---|
+| `fr.ps1` | Automatic setup and commands for Windows: checks the computer, installs Visual Studio and the launcher, builds, runs, packages |
+| `fr.sh` | The same for macOS and Linux, including the Xcode version check |
 | `GenerateMaps.py` | Creates or restores both maps and sets their game modes. Only needed if the maps go missing |
 
 ### `Content/Maps/`
