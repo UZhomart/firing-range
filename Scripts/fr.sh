@@ -28,9 +28,10 @@ MAP_NAMES="MainMenu FiringRange"
 
 MIN_CORES=4
 MIN_RAM_GB=8
-# The engine takes about 45 GB, the project build and a packaged game about 10 GB.
+# The engine takes about 40 GB, the project build and a packaged game about 10 GB,
+# Xcode takes its own share on a Mac.
 MIN_FREE_GB_WITH_ENGINE=15
-MIN_FREE_GB_WITHOUT_ENGINE=70
+MIN_FREE_GB_WITHOUT_ENGINE=65
 
 XCODE_APP_STORE="macappstore://apps.apple.com/app/id497799835"
 EPIC_LAUNCHER_DMG="https://launcher-public-service-prod06.ol.epicgames.com/launcher/api/installer/download/EpicGamesLauncher.dmg"

@@ -33,10 +33,11 @@ $VsWorkloads    = @('Microsoft.VisualStudio.Workload.NativeGame', 'Microsoft.Vis
 $MinCores = 4
 $MinRamGB = 8
 
-# Free space: the engine takes about 45 GB, Visual Studio about 20 GB,
-# the project build and a packaged game about 10 GB more.
+# Free space, measured on a working install: the engine takes about 37 GB,
+# Visual Studio with the Windows SDK about 15 GB, the project build and a
+# packaged game about 7 GB. The rest is headroom for downloads.
 $MinFreeGBWithEngine    = 15
-$MinFreeGBWithoutEngine = 80
+$MinFreeGBWithoutEngine = 65
 
 $EpicLauncherMsiUrl = 'https://launcher-public-service-prod06.ol.epicgames.com/launcher/api/installer/download/EpicGamesLauncherInstaller.msi'
 $VsBootstrapperUrl  = 'https://aka.ms/vs/17/release/vs_community.exe'
@@ -266,7 +267,7 @@ function Test-Environment {
         Write-Status ok "Free space on ${root} $freeGB GB"
     } else {
         Write-Status warn "Free space on ${root} $freeGB GB, about $needGB GB is needed."
-        if (-not $engine) { Write-Hint 'Engine ~45 GB + Visual Studio ~20 GB + project build ~10 GB.' }
+        if (-not $engine) { Write-Hint 'Engine ~40 GB + Visual Studio ~15 GB + project build ~10 GB.' }
     }
 
     Write-Title 'Tools'
