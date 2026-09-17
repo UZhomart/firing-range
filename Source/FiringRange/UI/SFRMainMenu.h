@@ -33,6 +33,15 @@ public:
 
 	void Construct(const FArguments& InArgs);
 
+	/**
+	 * Menus accept keyboard focus.
+	 *
+	 * A compound widget refuses focus by default, and the controller hands focus
+	 * to the menu when it switches the input mode. Without this override the
+	 * engine logs an error and keyboard navigation of the menu does not work.
+	 */
+	virtual bool SupportsKeyboardFocus() const override { return true; }
+
 private:
 	/** Entry list: start, settings, quit. */
 	TSharedRef<SWidget> BuildEntryPage();
