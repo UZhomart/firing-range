@@ -201,6 +201,23 @@ function Test-GitLfs {
     return (Invoke-Silently { git lfs version })
 }
 
+function Test-AsciiPath([string]$Path) {
+    return ($Path -notmatch '[^\u0000-\u007F]')
+}
+
+function Show-NonAsciiPathWarning {
+    # The Microsoft linker reads UnrealBuildTool's response files in the system
+    # code page, while the tool writes them as UTF-8. With letters outside
+    # English in the path the linker gets a broken path and stops with
+    # LNK1181. Running an already built game is not affected.
+    Write-Status warn 'Project path has letters outside English. The game runs, but the build will fail at the link step (LNK1181).'
+    Write-Hint 'Give the folder a second, English-only name and build through that name:'
+    Write-Hint ('  mklink /J C:\firing-range "{0}"' -f $ProjectRoot)
+    Write-Hint '  cd C:\firing-range'
+    Write-Hint '  fr build'
+    Write-Hint 'It is the same folder under two names, so nothing is copied or moved.'
+}
+
 function Get-ModuleBinary {
     return Join-Path $ProjectRoot 'Binaries\Win64\UnrealEditor-FiringRange.dll'
 }
@@ -331,6 +348,12 @@ function Test-Environment {
     }
 
     Write-Title 'Project'
+
+    if (Test-AsciiPath $ProjectRoot) {
+        Write-Status ok 'Project path has English letters only'
+    } else {
+        Show-NonAsciiPathWarning
+    }
 
     if (Test-ModuleCurrent) {
         Write-Status ok 'C++ module is built and up to date'
@@ -531,6 +554,7 @@ function Invoke-Setup {
 
 function Build-Project([string]$Engine, [string[]]$Extra) {
     $buildBat = Join-Path $Engine 'Engine\Build\BatchFiles\Build.bat'
+    if (-not (Test-AsciiPath $ProjectRoot)) { Show-NonAsciiPathWarning }
     Write-Hint 'The first build takes 5-15 minutes. Unreal limits parallel jobs to the free memory itself.'
     & $buildBat FiringRangeEditor Win64 Development "-Project=$ProjectFile" -WaitMutex -NoHotReload @Extra
     if ($LASTEXITCODE -ne 0) {
