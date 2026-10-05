@@ -47,6 +47,8 @@ compile_commands.json
 Builds/
 Packaged/
 *.zip
+*.rar
+*.7z
 !resources/*.zip
 # The packaged game archive is the one zip that belongs in the repository.
 !Release/*.zip
