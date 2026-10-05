@@ -223,6 +223,33 @@ git clone https://01.tomorrow-school.ai/git/zutemiss/firing-range.git
 cd firing-range
 ```
 
+> **Keep the path in English letters (Windows).** If the path contains letters
+> outside English — for example a Windows user name in Cyrillic — **the game
+> will run, but the project will not build**. The build stops at the link step:
+>
+> ```
+> LINK : fatal error LNK1181: cannot open input file 'E:\Ð¾Ð±ÑÑ...'
+> ```
+>
+> The reason: Unreal hands the Microsoft linker its file list as UTF-8, while
+> the linker reads it in the Windows system code page. With English letters
+> only, the two agree.
+>
+> `fr check` warns about this up front. If the folder cannot be moved, give it a
+> second, English-only name and build through that name — no administrator
+> rights needed:
+>
+> ```bat
+> mklink /J C:\firing-range "E:\<path with other letters>\firing-range"
+> cd C:\firing-range
+> fr build
+> ```
+>
+> It is one folder under two names, so nothing is copied. Remove the second name
+> later with `rmdir C:\firing-range`.
+>
+> macOS and Linux have no such limit.
+
 Double click **`FiringRange.uproject`**. The editor asks whether to build the
 missing modules — answer **Yes**. The first compilation takes 5–15 minutes.
 
