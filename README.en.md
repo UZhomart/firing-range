@@ -158,6 +158,7 @@ the same.
 | `fr package linux` | — | Builds the Linux version right on Windows (see [Linux](#linux)) |
 | `fr clean` | `make clean` | Deletes `Binaries/` and `Intermediate/` |
 | `fr clean all` | `make clean ARGS=all` | Also deletes `DerivedDataCache/` and `Packaged/` |
+| `fr deploy [folder]` | — | Brings the project from a USB drive onto this computer: copies it, installs what is missing, builds and runs |
 | `fr push` | `make push` | Authors only: pushes `main` to Gitea and updates GitHub |
 
 `run`, `editor`, `maps` and `package` rebuild the C++ module by themselves when
@@ -460,6 +461,7 @@ rounds actually fit, so walking over one with a full reserve leaves it standing.
 firing-range/
 ├── FiringRange.uproject          project manifest
 ├── fr.cmd                        commands for Windows: fr setup, fr run…
+├── deploy.cmd                    bring the project from a USB drive onto this computer
 ├── GNUmakefile                   the same commands through make
 ├── README.md                     Russian documentation
 ├── README.en.md                  this file

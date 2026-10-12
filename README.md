@@ -157,6 +157,7 @@ make setup
 | `fr package linux` | — | Собирает Linux-версию прямо на Windows (см. [Linux](#linux)) |
 | `fr clean` | `make clean` | Удаляет `Binaries/` и `Intermediate/` |
 | `fr clean all` | `make clean ARGS=all` | Удаляет ещё и `DerivedDataCache/` и `Packaged/` |
+| `fr deploy [папка]` | — | Переносит проект с внешнего диска на этот компьютер: копирует, ставит недостающее, собирает и запускает |
 | `fr push` | `make push` | Для авторов: отправляет `main` на Gitea и обновляет GitHub |
 
 `run`, `editor`, `maps` и `package` сами пересобирают C++-модуль, если исходники
@@ -460,6 +461,7 @@ clang под Linux. Для UE 5.5 это версия `v23_clang-18.1.0-rockylin
 firing-range/
 ├── FiringRange.uproject          манифест проекта
 ├── fr.cmd                        команды для Windows: fr setup, fr run…
+├── deploy.cmd                    развернуть проект с внешнего диска на этот компьютер
 ├── GNUmakefile                   те же команды через make
 ├── README.md                     этот файл
 ├── README.en.md                  английская версия

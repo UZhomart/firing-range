@@ -13,6 +13,7 @@
 #   editor            open the project in Unreal Editor
 #   package [linux]   build a standalone Shipping game and zip it
 #   clean [all]       delete build output
+#   deploy [folder]   copy this project to this computer and set it up there
 #   push              authors only: send main to Gitea and sync the GitHub mirror
 #
 # Unreal Engine is found automatically. Set UE_ROOT to use a specific copy.
@@ -678,6 +679,77 @@ function New-Package([string]$Engine, [string]$Target) {
 }
 
 # ---------------------------------------------------------------------------
+# deploy: bring the project from a USB drive onto this computer
+# ---------------------------------------------------------------------------
+
+function Get-DeployTarget([string]$Override) {
+    if ($Override) { return $Override }
+
+    $desktop = [Environment]::GetFolderPath('Desktop')
+    $target = Join-Path $desktop 'firing-range'
+
+    # Two reasons to keep away from the desktop:
+    # OneDrive would upload every build file and lock files during a build,
+    # and a user name outside English breaks the Microsoft linker.
+    if ($desktop -like '*\OneDrive\*') {
+        Write-Status info 'The desktop is synced by OneDrive, so C:\firing-range is used instead.'
+        return 'C:\firing-range'
+    }
+    if (-not (Test-AsciiPath $target)) {
+        Write-Status info 'The user name has letters outside English, so C:\firing-range is used instead.'
+        return 'C:\firing-range'
+    }
+    return $target
+}
+
+function Invoke-Deploy([string]$Override) {
+    $target = Get-DeployTarget $Override
+    $source = (Resolve-Path $ProjectRoot).Path
+
+    if ($target.TrimEnd('/', [char]92) -ieq $source.TrimEnd('/', [char]92)) {
+        Stop-WithError 'the project is already on this computer, there is nothing to copy.'
+    }
+
+    Write-Title 'Step 1 of 3. Copying the project'
+    Write-Status info "From: $source"
+    Write-Status info "To:   $target"
+    if (Test-Path $target) { Write-Status warn 'The folder exists already. Files will be updated, nothing is deleted.' }
+
+    # Only what cannot be rebuilt travels. Intermediate holds absolute paths of
+    # the machine that built it and would send the output to the wrong place.
+    $skipFolders = @('Intermediate', 'DerivedDataCache', 'Packaged', 'Saved')
+    $robocopy = @(
+        $source, $target, '/E', '/COPY:DAT', '/DCOPY:DAT', '/XJ',
+        '/R:1', '/W:1', '/MT:8', '/NFL', '/NDL', '/NP', '/NJH',
+        '/XD') + $skipFolders + @('/XF', '*.rar', '*.7z', '*.zip')
+    & robocopy @robocopy | Select-String '^\s*(Dirs|Files|Bytes)\s*:' | ForEach-Object { Write-Hint $_.Line.Trim() }
+    # Robocopy returns a bit mask; 8 and above means real failures.
+    if ($LASTEXITCODE -ge 8) { Stop-WithError "copying failed (robocopy code $LASTEXITCODE)." }
+    Write-Status ok 'Project copied'
+
+    Write-Title 'Step 2 of 3. Setting up this computer'
+    Write-Hint 'The copy on this computer now runs its own setup: tools, engine check, build, maps.'
+    $localScript = Join-Path $target 'Scripts\fr.ps1'
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $localScript setup
+    $setupCode = $LASTEXITCODE
+
+    if ($setupCode -eq 2) {
+        Write-Title 'Unreal Engine is still missing'
+        Write-Host "  Install it as written above, then run:  $target\fr.cmd setup"
+        exit 2
+    }
+    if ($setupCode -ne 0) { Stop-WithError "setup failed on this computer (exit code $setupCode)." }
+
+    Write-Title 'Step 3 of 3. Starting the game'
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $localScript run
+
+    Write-Title 'Done'
+    Write-Host "  The project lives in:  $target"
+    Write-Host "  Next time just run:    $target\fr.cmd run"
+    Write-Hint 'The USB drive is no longer needed for playing or building.'
+}
+
+# ---------------------------------------------------------------------------
 # clean, push
 # ---------------------------------------------------------------------------
 
@@ -751,6 +823,8 @@ Firing Range helper (Windows)
   fr editor           open the project in Unreal Editor
   fr package [linux]  build a Shipping game into Packaged\ and zip it
   fr clean [all]      delete Binaries and Intermediate (all: also DerivedDataCache, Packaged)
+  fr deploy [folder]  copy this project from a USB drive onto this computer and set it up
+                      default folder: the desktop; double-click deploy.cmd does the same
   fr push             authors only: update Gitea and the GitHub mirror
 
 In PowerShell type .\fr instead of fr. With GNU make installed, 'make <command>' works too.
@@ -775,6 +849,7 @@ switch ($Command) {
     'editor'        { Start-Editor (Get-EngineOrStop) }
     'package'       { New-Package (Get-EngineOrStop) $Option }
     'clean'         { Invoke-Clean $Option }
+    'deploy'        { Invoke-Deploy ($Rest -join ' ') }
     'push'          { Invoke-Push }
     'install-tools' { Install-Tools $Rest }
     default {
