@@ -727,9 +727,30 @@ function Invoke-Deploy([string]$Override) {
     if ($LASTEXITCODE -ge 8) { Stop-WithError "copying failed (robocopy code $LASTEXITCODE)." }
     Write-Status ok 'Project copied'
 
+    # The Microsoft linker cannot read paths with letters outside English, so a
+    # folder like Documents under a Russian user name needs an English alias.
+    $buildPath = $target
+    if (-not (Test-AsciiPath $target)) {
+        $alias = 'C:\firing-range'
+        if (Test-Path $alias) {
+            $existing = @((Get-Item $alias).Target)
+            if ($existing -contains $target) {
+                $buildPath = $alias
+                Write-Status ok "Building through the existing English name $alias"
+            } else {
+                Write-Status warn "$alias is taken by something else, so the build may fail with LNK1181."
+            }
+        } else {
+            New-Item -ItemType Junction -Path $alias -Target $target | Out-Null
+            $buildPath = $alias
+            Write-Status ok "Second name for the folder created: $alias"
+            Write-Hint 'It is the same folder under an English name. The build runs through it.'
+        }
+    }
+
     Write-Title 'Step 2 of 3. Setting up this computer'
     Write-Hint 'The copy on this computer now runs its own setup: tools, engine check, build, maps.'
-    $localScript = Join-Path $target 'Scripts\fr.ps1'
+    $localScript = Join-Path $buildPath 'Scripts\fr.ps1'
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $localScript setup
     $setupCode = $LASTEXITCODE
 
@@ -745,7 +766,11 @@ function Invoke-Deploy([string]$Override) {
 
     Write-Title 'Done'
     Write-Host "  The project lives in:  $target"
-    Write-Host "  Next time just run:    $target\fr.cmd run"
+    Write-Host "  Start the game:        $target\fr.cmd run"
+    if ($buildPath -ne $target) {
+        Write-Host "  Build from here:       $buildPath\fr.cmd build"
+        Write-Hint 'Both paths are the same folder. Only the build needs the English one.'
+    }
     Write-Hint 'The USB drive is no longer needed for playing or building.'
 }
 
